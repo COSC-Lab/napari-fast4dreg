@@ -1,0 +1,57 @@
+name: napari-fast4dreg
+display_name: Fast4DReg
+# use 'hidden' to remove plugin from napari hub search results
+visibility: public
+# see https://napari.org/stable/plugins/manifest.html for valid categories
+categories: ["Annotation", "Segmentation", "Acquisition"]
+contributions:
+  commands:
+    - id: napari-fast4dreg.get_reader
+      python_name: napari_fast4dreg._reader:napari_get_reader
+      title: Open data with Fast4DReg
+    - id: napari-fast4dreg.write_multiple
+      python_name: napari_fast4dreg._writer:write_multiple
+      title: Save multi-layer data with Fast4DReg
+    - id: napari-fast4dreg.write_single_image
+      python_name: napari_fast4dreg._writer:write_single_image
+      title: Save image data with Fast4DReg
+    - id: napari-fast4dreg.make_sample_data
+      python_name: napari_fast4dreg._sample_data:make_sample_data
+      title: Load sample data from Fast4DReg
+    - id: napari-fast4dreg.make_container_widget
+      python_name: napari_fast4dreg:ImageThreshold
+      title: Make threshold Container widget
+    - id: napari-fast4dreg.make_magic_widget
+      python_name: napari_fast4dreg:threshold_magic_widget
+      title: Make threshold magic widget
+    - id: napari-fast4dreg.make_function_widget
+      python_name: napari_fast4dreg:threshold_autogenerate_widget
+      title: Make threshold function widget
+    - id: napari-fast4dreg.make_qwidget
+      python_name: napari_fast4dreg:ExampleQWidget
+      title: Make example QWidget
+  readers:
+    - command: napari-fast4dreg.get_reader
+      accepts_directories: false
+      filename_patterns: ['*.npy']
+  writers:
+    - command: napari-fast4dreg.write_multiple
+      layer_types: ['image*','labels*']
+      filename_extensions: []
+    - command: napari-fast4dreg.write_single_image
+      layer_types: ['image']
+      filename_extensions: ['.npy']
+  sample_data:
+    - command: napari-fast4dreg.make_sample_data
+      display_name: Fast4DReg
+      key: unique_id.1
+  widgets:
+    - command: napari-fast4dreg.make_container_widget
+      display_name: Container Threshold
+    - command: napari-fast4dreg.make_magic_widget
+      display_name: Magic Threshold
+    - command: napari-fast4dreg.make_function_widget
+      autogenerate: true
+      display_name: Autogenerate Threshold
+    - command: napari-fast4dreg.make_qwidget
+      display_name: Example QWidget
