@@ -31,9 +31,25 @@ Replace code below according to your needs.
 from typing import TYPE_CHECKING
 
 from magicgui import magic_factory
-from magicgui.widgets import CheckBox, Container, create_widget
-from qtpy.QtWidgets import QHBoxLayout, QPushButton, QWidget
-from skimage.util import img_as_float
+from magicgui import magicgui
+from superqt.utils import thread_worker
+import time
+import os
+import numpy as np
+import dask.array as da
+import pandas as pd
+import tifffile 
+from enum import Enum
+from ._fast4Dreg_functions import get_xy_drift, apply_xy_drift
+from ._fast4Dreg_functions import get_z_drift, apply_z_drift
+from ._fast4Dreg_functions import get_rotation, apply_alpha_drift
+from ._fast4Dreg_functions import crop_data
+from ._fast4Dreg_functions import read_tmp_data, write_tmp_data_to_disk
+
+from magicgui.tqdm import tqdm
+from dask import delayed
+import napari 
+import shutil
 
 if TYPE_CHECKING:
     import napari
@@ -42,87 +58,159 @@ if TYPE_CHECKING:
 # Uses the `autogenerate: true` flag in the plugin manifest
 # to indicate it should be wrapped as a magicgui to autogenerate
 # a widget.
-def threshold_autogenerate_widget(
-    img: "napari.types.ImageData",
-    threshold: "float", 
-) -> "napari.types.LabelsData":
-    return img_as_float(img) > threshold
+
+class Axes(Enum):
+    """str for various media and their refractive indices."""
+
+    CTZYX = 0
+    TZCYX_ImageJ = 1
 
 
-# the magic_factory decorator lets us customize aspects of our widget
-# we specify a widget type for the threshold parameter
-# and use auto_call=True so the function is called whenever
-# the value of a parameter changes
-@magic_factory(
-    threshold={"widget_type": "FloatSlider", "max": 1}, auto_call=True
-)
-def threshold_magic_widget(
-    img_layer: "napari.layers.Image", threshold: "float"
-) -> "napari.types.LabelsData":
-    return img_as_float(img_layer.data) > threshold
+def Fast4DReg_widget(
+    image: "napari.types.ImageData",
+    axes = Axes.CTZYX , 
+    output_path = r"E:\Data_Leuven\Fast4DReg_Dask\plugin_output_trial", 
+    ref_channel = r"1", 
+    correct_xy = True,
+    correct_z = True,
+    correct_center_rotation = True,
+    crop_output = True, 
+    export_csv = True 
+    ):
+    
+    
+    # start timer
+    
+    with tqdm() as pbar:
+        
+        @thread_worker(connect={"finished": lambda: pbar.progressbar.hide()})
+        def run_pipeline(image, 
+                         axes, 
+                         output_path, 
+                         ref_channel, 
+                         correct_xy, 
+                         correct_z, 
+                         correct_center_rotation, 
+                         crop_output, 
+                         export_csv
+                         ): 
+            
+            # start timer
+            start_time = time.time()
 
+            # rephrase variables 
+            image = da.asarray(image)
 
-# if we want even more control over our widget, we can use
-# magicgui `Container`
-class ImageThreshold(Container):
-    def __init__(self, viewer: "napari.viewer.Viewer"):
-        super().__init__()
-        self._viewer = viewer
-        # use create_widget to generate widgets from type annotations
-        self._image_layer_combo = create_widget(
-            label="Image", annotation="napari.layers.Image"
-        )
-        self._threshold_slider = create_widget(
-            label="Threshold", annotation=float, widget_type="FloatSlider"
-        )
-        self._threshold_slider.min = 0
-        self._threshold_slider.max = 1
-        # use magicgui widgets directly
-        self._invert_checkbox = CheckBox(text="Keep pixels below threshold")
+            ## reorder image if necessary: 
 
-        # connect your own callbacks
-        self._threshold_slider.changed.connect(self._threshold_im)
-        self._invert_checkbox.changed.connect(self._threshold_im)
+            if axes.value == 0: 
+                image = image
+            if axes.value == 1: 
+                # move channel domain to front
+                image = image.swapaxes(0,2)
+                # swap time and z 
+                image = image.swapaxes(1,2)
+                print(np.shape(image))
+            
+            print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
 
-        # append into/extend the container with your widgets
-        self.extend(
-            [
-                self._image_layer_combo,
-                self._threshold_slider,
-                self._invert_checkbox,
-            ]
-        )
+            data = image
+            data = write_tmp_data_to_disk(tmp_path, data)
+            output_dir = output_path
+            os.chdir(output_dir)    
+            
+            # reference channel is channel 1, where the nuclei are imaged
+            ref_channel = int(ref_channel)
+            
+            # tmp_file for read/write
+            tmp_path = str(output_dir + '//tmp_data//')
+            
+            # read in raw data as dask array
+            new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
+            data = data.rechunk(new_shape)
+            print('Imge imported')
+            
+            # Run the method 
+            if correct_xy == True: 
+                xy_drift = get_xy_drift(data, ref_channel)
+                tmp_data = apply_xy_drift(data, xy_drift)
+                # save intermediate results to temporary npy file
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
+            else: 
+                tmp_data = data
+                xy_drift = np.asarray([[0,0]])
+            
+            if correct_z == True: 
+                # Correct z-drift
+                z_drift = get_z_drift(data, ref_channel)
+                tmp_data = apply_z_drift(tmp_data, z_drift)
 
-    def _threshold_im(self):
-        image_layer = self._image_layer_combo.value
-        if image_layer is None:
-            return
+                # save intermediate result
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
 
-        image = img_as_float(image_layer.data)
-        name = image_layer.name + "_thresholded"
-        threshold = self._threshold_slider.value
-        if self._invert_checkbox.value:
-            thresholded = image < threshold
-        else:
-            thresholded = image > threshold
-        if name in self._viewer.layers:
-            self._viewer.layers[name].data = thresholded
-        else:
-            self._viewer.add_labels(thresholded, name=name)
+                
+            else: 
+                z_drift = np.asarray([[0,0]])
+            
+            if  crop_output == True: 
+                # Crop, according to drift
+                tmp_data = crop_data(tmp_data, xy_drift, z_drift)
+                new_shape = (np.shape(tmp_data)[0],1,np.shape(tmp_data)[-3],np.shape(tmp_data)[-2],np.shape(tmp_data)[-1])
+                
+                # save intermediate result
+                crop_path = output_dir +"//cropped_tmp_data"
+                da.to_npy_stack(crop_path,tmp_data, axis = 1)
+                del tmp_data
+                shutil.rmtree(tmp_path)
+                shutil.move(crop_path, tmp_path)
+                tmp_data = read_tmp_data(tmp_path)
 
+            
+            if correct_center_rotation == True: 
+                # Correct Rotation 
+                alpha = get_rotation(tmp_data, ref_channel)
+                tmp_data = apply_alpha_drift(tmp_data, alpha)
+                
+                # save intermediate result
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
 
-class ExampleQWidget(QWidget):
-    # your QWidget.__init__ can optionally request the napari viewer instance
-    # use a type annotation of 'napari.viewer.Viewer' for any parameter
-    def __init__(self, viewer: "napari.viewer.Viewer"):
-        super().__init__()
-        self.viewer = viewer
+            else: 
+                alpha = [0]
+            
+            if export_csv == True:
+                # Export .csv
+                print("Export drifts to csv.")
+                x = pd.DataFrame({'x-drift': xy_drift[:,0]})
+                y = pd.DataFrame({'y-drift': xy_drift[:,1]})
+                z = pd.DataFrame({'z-drift': z_drift[:,0]})
+                r = pd.DataFrame({'rotation': alpha})
+                df = pd.concat([x,y,z,r], axis=1)
+                df = df.fillna(0)
+                df.to_csv("drifts.csv")
+            
+            # write results to tif
+            export_path = output_dir + "/registered.tif"
+            tifffile.imwrite(export_path, tmp_data, ome=True)
+            
+            print('Rigid Fast4D Registration complete.')
+            print("--- %s seconds ---" % (time.time() - start_time))
 
-        btn = QPushButton("Click me!")
-        btn.clicked.connect(self._on_click)
-
-        self.setLayout(QHBoxLayout())
-        self.layout().addWidget(btn)
-
-    def _on_click(self):
-        print("napari has", len(self.viewer.layers), "layers")
+            return tmp_data
+        
+        # grab viewer
+        viewer = napari.current_viewer()
+        
+        # initiate worker
+        worker = run_pipeline(image, 
+                         axes, 
+                         output_path, 
+                         ref_channel, 
+                         correct_xy, 
+                         correct_z, 
+                         correct_center_rotation,
+                         crop_output,
+                         export_csv
+                         )
+        
+        # visualise worker once its done
+        worker.returned.connect(viewer.add_image)

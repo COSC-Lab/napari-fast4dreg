@@ -18,18 +18,10 @@ contributions:
     - id: napari-fast4dreg.make_sample_data
       python_name: napari_fast4dreg._sample_data:make_sample_data
       title: Load sample data from Fast4DReg
-    - id: napari-fast4dreg.make_container_widget
-      python_name: napari_fast4dreg:ImageThreshold
-      title: Make threshold Container widget
-    - id: napari-fast4dreg.make_magic_widget
-      python_name: napari_fast4dreg:threshold_magic_widget
-      title: Make threshold magic widget
     - id: napari-fast4dreg.make_function_widget
-      python_name: napari_fast4dreg:threshold_autogenerate_widget
+      python_name: napari_fast4dreg:Fast4DReg_widget
       title: Make threshold function widget
-    - id: napari-fast4dreg.make_qwidget
-      python_name: napari_fast4dreg:ExampleQWidget
-      title: Make example QWidget
+
   readers:
     - command: napari-fast4dreg.get_reader
       accepts_directories: false
@@ -46,12 +38,7 @@ contributions:
       display_name: Fast4DReg
       key: unique_id.1
   widgets:
-    - command: napari-fast4dreg.make_container_widget
-      display_name: Container Threshold
-    - command: napari-fast4dreg.make_magic_widget
-      display_name: Magic Threshold
     - command: napari-fast4dreg.make_function_widget
       autogenerate: true
-      display_name: Autogenerate Threshold
-    - command: napari-fast4dreg.make_qwidget
-      display_name: Example QWidget
+      display_name: fast4dreg
+

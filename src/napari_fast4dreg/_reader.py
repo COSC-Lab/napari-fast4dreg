@@ -6,7 +6,8 @@ implement multiple readers or even other plugin contributions. see:
 https://napari.org/stable/plugins/guides.html?#readers
 """
 import numpy as np
-
+from tifffile import imread
+import dask.array as da 
 
 def napari_get_reader(path):
     """A basic implementation of a Reader contribution.
@@ -29,7 +30,7 @@ def napari_get_reader(path):
         path = path[0]
 
     # if we know we cannot read the file, we immediately return None.
-    if not path.endswith(".npy"):
+    if not path.endswith(".tif") or not path.endswith(".tiff"):
         return None
 
     # otherwise we return the *function* that can read ``path``.
@@ -61,9 +62,9 @@ def reader_function(path):
     # handle both a string and a list of strings
     paths = [path] if isinstance(path, str) else path
     # load all files into array
-    arrays = [np.load(_path) for _path in paths]
+    arrays = [da.from_zarr(imread(_path, aszarr=True)) for _path in paths]
     # stack arrays into single array
-    data = np.squeeze(np.stack(arrays))
+    data = da.stack(arrays, axis = 0)
 
     # optional kwargs for the corresponding viewer.add_* method
     add_kwargs = {}
