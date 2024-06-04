@@ -68,7 +68,7 @@ class Axes(Enum):
 
 def Fast4DReg_widget(
     image: "napari.types.ImageData",
-    axes = Axes.CTZYX , 
+    axes = Axes.TZCYX_ImageJ, 
     output_path = r"E:\Data_Leuven\Fast4DReg_Dask\plugin_output_trial", 
     ref_channel = r"1", 
     correct_xy = True,
