@@ -7,7 +7,10 @@
 [![codecov](https://codecov.io/gh/Macl-I/napari-fast4dreg/branch/main/graph/badge.svg)](https://codecov.io/gh/Macl-I/napari-fast4dreg)
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-fast4dreg)](https://napari-hub.org/plugins/napari-fast4dreg)
 
-Dask empowered multidim, rigid registration for volumetric measurements
+Dask empowered multidim, rigid registration for volumetric measurements.
+This is basically just a sophisticated python port of the original Fast4DReg Fiji Plugin: 
+https://journals.biologists.com/jcs/article/136/4/jcs260728/287682/Fast4DReg-fast-registration-of-4D-microscopy
+
 
 ----------------------------------
 
@@ -32,8 +35,7 @@ You can install `napari-fast4dreg` via [pip]:
 
 ## Contributing
 
-Contributions are very welcome. Tests can be run with [tox], please ensure
-the coverage at least stays the same before you submit a pull request.
+Contributions are very welcome. Just send me an E-mail: marcel.issler@kuleuven.be or directly submit a pull request.
 
 ## License
 

@@ -40,6 +40,7 @@ def get_xy_drift(_data, ref_channel):
     shifts_xy = shifts_xy.tolist()
     shifts_xy.insert(0,[0,0])
     shifts_xy = np.asarray(shifts_xy)
+    
     plt.title('XY-Drift')
     plt.plot(shifts_xy[:,0], label = 'x')
     plt.plot(shifts_xy[:,1], label = 'y')
@@ -48,7 +49,6 @@ def get_xy_drift(_data, ref_channel):
     plt.ylabel('Drift in pixel')
     plt.savefig('XY-Drfit.svg')
     plt.clf()
-
     return shifts_xy
 
 def get_z_drift(_data, ref_channel):
@@ -148,7 +148,7 @@ def rotate_stack(_image, _alpha):
         # format arrays for proper export
         _out_stack = da.stack([da.from_delayed(x, shape=np.shape(Z), dtype=np.dtype(Z)) for x in _out_stack])
         _image_out.append(_out_stack)
-        
+
     return da.stack(_image_out)
     
 
@@ -238,19 +238,12 @@ def apply_alpha_drift(_data, alpha_drift):
 
     return _data_out
 
-def write_tmp_data_to_disk(_path, _data): 
-    print('Applying transformation adn writing intermediate results to disk.')
-    _new_chunks = (np.shape(_data)[0],1,np.shape(_data)[-3],np.shape(_data)[-2],np.shape(_data)[-1])
-    da.to_npy_stack(_path, _data, axis = 1)
-    _reloaded = da.from_npy_stack(_path, mmap_mode='r+')
-    _reloaded = _reloaded.rechunk(_new_chunks)
-    return _reloaded
+def save_to_tmp_folder(_path, _file, _new_shape): 
+    print('Save intermediate results to temporary .npy file.')
+    da.to_npy_stack(_path, _file, axis = 1)
+    _file_reloaded = da.from_npy_stack(_path, mmap_mode='r+').rechunk(_new_shape)
+    return _file_reloaded
 
-def read_tmp_data(_path):
-    _reloaded = da.from_npy_stack(_path, mmap_mode='r+')
-    _new_chunks = (np.shape(_reloaded)[0],1,np.shape(_reloaded)[-3],np.shape(_reloaded)[-2],np.shape(_reloaded)[-1])
-    _reloaded = _reloaded.rechunk(_new_chunks)
-    return _reloaded
 
 # Benchmarking notes: 
 # File with 3.2Gb size, two channels, 21 timepoints,
