@@ -238,13 +238,16 @@ def apply_alpha_drift(_data, alpha_drift):
 
     return _data_out
 
-def save_to_tmp_folder(_path, _file, _new_shape): 
+def write_tmp_data_to_disk(_path, _file, _new_shape): 
     print('Save intermediate results to temporary .npy file.')
     da.to_npy_stack(_path, _file, axis = 1)
     _file_reloaded = da.from_npy_stack(_path, mmap_mode='r+').rechunk(_new_shape)
     return _file_reloaded
 
 
+def read_tmp_data(_path, _new_shape): 
+    _file_loaded = da.from_npy_stack(_path, mmap_mode='r+').rechunk(_new_shape)
+    return _file_loaded
 # Benchmarking notes: 
 # File with 3.2Gb size, two channels, 21 timepoints,
 # and 162 slices of 512, 512 pixels took 177.85 seconds (ca. 3 min)
