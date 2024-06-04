@@ -113,7 +113,9 @@ def Fast4DReg_widget(
                 print(np.shape(image))
             
             print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
-
+            # tmp_file for read/write
+            tmp_path = str(output_dir + '//tmp_data//')
+            
             data = image
             data = write_tmp_data_to_disk(tmp_path, data)
             output_dir = output_path
@@ -121,9 +123,6 @@ def Fast4DReg_widget(
             
             # reference channel is channel 1, where the nuclei are imaged
             ref_channel = int(ref_channel)
-            
-            # tmp_file for read/write
-            tmp_path = str(output_dir + '//tmp_data//')
             
             # read in raw data as dask array
             new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
