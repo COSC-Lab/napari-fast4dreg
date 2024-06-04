@@ -113,13 +113,13 @@ def Fast4DReg_widget(
                 print(np.shape(image))
             
             print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
-            # tmp_file for read/write
-            tmp_path = str(output_dir + '//tmp_data//')
             
             data = image
-            data = write_tmp_data_to_disk(tmp_path, data)
             output_dir = output_path
             os.chdir(output_dir)    
+            
+            # tmp_file for read/write
+            tmp_path = str(output_dir + '//tmp_data//')
             
             # reference channel is channel 1, where the nuclei are imaged
             ref_channel = int(ref_channel)
@@ -129,12 +129,15 @@ def Fast4DReg_widget(
             data = data.rechunk(new_shape)
             print('Imge imported')
             
+            # write data to tmp_file
+            data = write_tmp_data_to_disk(tmp_path, data, new_shape)
+
             # Run the method 
             if correct_xy == True: 
                 xy_drift = get_xy_drift(data, ref_channel)
                 tmp_data = apply_xy_drift(data, xy_drift)
                 # save intermediate results to temporary npy file
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
             else: 
                 tmp_data = data
                 xy_drift = np.asarray([[0,0]])
@@ -145,7 +148,7 @@ def Fast4DReg_widget(
                 tmp_data = apply_z_drift(tmp_data, z_drift)
 
                 # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
 
                 
             else: 
@@ -162,7 +165,7 @@ def Fast4DReg_widget(
                 del tmp_data
                 shutil.rmtree(tmp_path)
                 shutil.move(crop_path, tmp_path)
-                tmp_data = read_tmp_data(tmp_path)
+                tmp_data = read_tmp_data(tmp_path, new_shape)
 
             
             if correct_center_rotation == True: 
@@ -171,7 +174,7 @@ def Fast4DReg_widget(
                 tmp_data = apply_alpha_drift(tmp_data, alpha)
                 
                 # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data)
+                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
 
             else: 
                 alpha = [0]
