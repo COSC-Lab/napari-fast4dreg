@@ -24,6 +24,6 @@ def test_Fast4DReg_widget():
                                         export_csv = True )
     
     # get layer data 
-    layers = v.layers()
+    layers = viewer.layers()
     
     assert layers[0].data == layers[-1].data
