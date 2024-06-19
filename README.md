@@ -12,6 +12,9 @@ This is basically just a python port of the original Fast4DReg Fiji Plugin, with
 The original paper can be found here:
 https://journals.biologists.com/jcs/article/136/4/jcs260728/287682/Fast4DReg-fast-registration-of-4D-microscopy
 
+## Example Outcome
+![]([https://github.com/Macl-I/napari-fast4dreg/blob/main/media/3D_plane_registration.gif])
+![]([https://github.com/Macl-I/napari-fast4dreg/blob/main/media/3D_registration.gif])
 
 ----------------------------------
 
