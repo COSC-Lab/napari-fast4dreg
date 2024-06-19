@@ -31,7 +31,18 @@ You can install `napari-fast4dreg` via [pip]:
 
     pip install napari-fast4dreg
 
+## Useage 
 
+It's easy! 
+1) Just drag and drop your image, or the test image from this repository, into napari and open it normally. 
+Don't worry if your file is big, napari already internally uses dask to open even the biggest images (althought it might hurts the performance).
+2) Open the napari-fast4dreg plugin from the plugin menue.
+3) In the image row, make sure your image is selected in the image drop down menue.
+4) In the axes row, choose the structure of your input image. If your axis orientation is correct in ImageJ choose the standard TZCYX (ImageJ) orientation. If you are using python to process the image you probabbly are using the alternatively availabe CTZYX orientation. In this case just select CTZYX in the drop down menue instead.
+5) Select the reference channel used for the registration. The drift will be determined for this reference channel and applied to all other channels. Counting begins by 0. In case for the test image we select the nuclear signal in channel 1.
+6) Select the corrections that you want to apply on your image. Note that the crop function reduces only in xy, according to the previously determined drift. (e.g. drift = -5 in x --> drop 5 pixels from the left hand side of the registered stack.)
+7) Wait for output (this may take a while).
+8) Enjoy your registered image.
 
 
 ## Contributing
