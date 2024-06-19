@@ -8,8 +8,8 @@ from napari_fast4dreg._widget import (
 def test_Fast4DReg_widget():
     test_image = tifffile.imread('test_input.tif')
     reference_registered_image = tifffile.imread('registered.tif')
-    resgistered_image = Fast4DReg_widget(image: test_image,
-                                        axes = Axes.TZCYX_ImageJ, 
+    resgistered_image = Fast4DReg_widget(image = test_image,
+                                        axes = 1, 
                                         output_path = r"E:\Data_Leuven\Fast4DReg_Dask\plugin_output_trial", 
                                         ref_channel = r"1", 
                                         correct_xy = True,
