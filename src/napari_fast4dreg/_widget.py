@@ -84,7 +84,7 @@ def Fast4DReg_widget(
     
     with tqdm() as pbar:
         
-        @thread_worker(connect={"finished": lambda: pbar._get_progressba.hide()})
+        @thread_worker(connect={"finished": lambda: pbar._get_progressbar.hide()})
         def run_pipeline(image, 
                             axes, 
                             output_path, 
