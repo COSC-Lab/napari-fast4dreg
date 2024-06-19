@@ -4,6 +4,12 @@ import napari
 
 from napari_fast4dreg._widget import Fast4DReg_widget 
 
+class Axes(Enum):
+    """str for various media and their refractive indices."""
+
+    CTZYX = 0
+    TZCYX_ImageJ = 1
+
 def test_Fast4DReg_widget():
     # working path is napari-fast4dreg/napari-fast4dreg/
     # 
@@ -14,7 +20,7 @@ def test_Fast4DReg_widget():
 
     out_folder = 'example_files/'
     resgistered_image = Fast4DReg_widget(image = test_image,
-                                        axes = 1, 
+                                        axes = Axes.TZCYX_ImageJ, 
                                         output_path = out_folder, 
                                         ref_channel = r"1", 
                                         correct_xy = True,
