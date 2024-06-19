@@ -8,7 +8,7 @@
 [![napari hub](https://img.shields.io/endpoint?url=https://api.napari-hub.org/shields/napari-fast4dreg)](https://napari-hub.org/plugins/napari-fast4dreg)
 
 Dask empowered multi-dimensional, registration for volumetric measurements.
-This is basically just a python port of the original Fast4DReg Fiji Plugin, with added rotation correction in lateral direction.
+This is a python port of the original Fast4DReg Fiji Plugin, with added rotation correction in lateral direction and support for out of memory processing.
 The original paper can be found here:
 https://journals.biologists.com/jcs/article/136/4/jcs260728/287682/Fast4DReg-fast-registration-of-4D-microscopy
 
