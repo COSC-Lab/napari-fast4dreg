@@ -58,6 +58,7 @@ if TYPE_CHECKING:
 # Uses the `autogenerate: true` flag in the plugin manifest
 # to indicate it should be wrapped as a magicgui to autogenerate
 # a widget.
+viewer = napari.current_viewer()
 
 class Axes(Enum):
     """str for various media and their refractive indices."""
@@ -65,6 +66,121 @@ class Axes(Enum):
     CTZYX = 0
     TZCYX_ImageJ = 1
 
+@thread_worker("returned": viewer.add_image)
+def run_pipeline(image, 
+                    axes, 
+                    output_path, 
+                    ref_channel, 
+                    correct_xy, 
+                    correct_z, 
+                    correct_center_rotation, 
+                    crop_output, 
+                    export_csv
+                    ): 
+    
+    # start timer
+    start_time = time.time()
+
+    # rephrase variables 
+    image = da.asarray(image)
+
+    ## reorder image if necessary: 
+
+    if axes.value == 0: 
+        image = image
+    if axes.value == 1: 
+        # move channel domain to front
+        image = image.swapaxes(0,2)
+        # swap time and z 
+        image = image.swapaxes(1,2)
+        print(np.shape(image))
+    
+    print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
+    
+    data = image
+    output_dir = output_path
+    os.chdir(output_dir)    
+    
+    # tmp_file for read/write
+    tmp_path = str(output_dir + '//tmp_data//')
+    
+    # reference channel is channel 1, where the nuclei are imaged
+    ref_channel = int(ref_channel)
+    
+    # read in raw data as dask array
+    new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
+    data = data.rechunk(new_shape)
+    print('Imge imported')
+    
+    # write data to tmp_file
+    data = write_tmp_data_to_disk(tmp_path, data, new_shape)
+
+    # Run the method 
+    if correct_xy == True: 
+        xy_drift = get_xy_drift(data, ref_channel)
+        tmp_data = apply_xy_drift(data, xy_drift)
+        # save intermediate results to temporary npy file
+        tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+    else: 
+        tmp_data = data
+        xy_drift = np.asarray([[0,0]])
+    
+    if correct_z == True: 
+        # Correct z-drift
+        z_drift = get_z_drift(data, ref_channel)
+        tmp_data = apply_z_drift(tmp_data, z_drift)
+
+        # save intermediate result
+        tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+
+        
+    else: 
+        z_drift = np.asarray([[0,0]])
+    
+    if  crop_output == True: 
+        # Crop, according to drift
+        tmp_data = crop_data(tmp_data, xy_drift, z_drift)
+        new_shape = (np.shape(tmp_data)[0],1,np.shape(tmp_data)[-3],np.shape(tmp_data)[-2],np.shape(tmp_data)[-1])
+        
+        # save intermediate result
+        crop_path = output_dir +"//cropped_tmp_data"
+        da.to_npy_stack(crop_path,tmp_data, axis = 1)
+        del tmp_data
+        shutil.rmtree(tmp_path)
+        shutil.move(crop_path, tmp_path)
+        tmp_data = read_tmp_data(tmp_path, new_shape)
+
+    
+    if correct_center_rotation == True: 
+        # Correct Rotation 
+        alpha = get_rotation(tmp_data, ref_channel)
+        tmp_data = apply_alpha_drift(tmp_data, alpha)
+        
+        # save intermediate result
+        tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+
+    else: 
+        alpha = [0]
+    
+    if export_csv == True:
+        # Export .csv
+        print("Export drifts to csv.")
+        x = pd.DataFrame({'x-drift': xy_drift[:,0]})
+        y = pd.DataFrame({'y-drift': xy_drift[:,1]})
+        z = pd.DataFrame({'z-drift': z_drift[:,0]})
+        r = pd.DataFrame({'rotation': alpha})
+        df = pd.concat([x,y,z,r], axis=1)
+        df = df.fillna(0)
+        df.to_csv("drifts.csv")
+    
+    # write results to tif
+    export_path = output_dir + "/registered.tif"
+    tifffile.imwrite(export_path, tmp_data, ome=True)
+    
+    print('Rigid Fast4D Registration complete.')
+    print("--- %s seconds ---" % (time.time() - start_time))
+
+    return tmp_data
 
 def Fast4DReg_widget(
     image: "napari.types.ImageData",
@@ -82,122 +198,6 @@ def Fast4DReg_widget(
     # start timer
     
     with tqdm() as pbar:
-        
-        @thread_worker(connect={"finished": lambda: pbar.progressbar.hide()})
-        def run_pipeline(image, 
-                         axes, 
-                         output_path, 
-                         ref_channel, 
-                         correct_xy, 
-                         correct_z, 
-                         correct_center_rotation, 
-                         crop_output, 
-                         export_csv
-                         ): 
-            
-            # start timer
-            start_time = time.time()
-
-            # rephrase variables 
-            image = da.asarray(image)
-
-            ## reorder image if necessary: 
-
-            if axes.value == 0: 
-                image = image
-            if axes.value == 1: 
-                # move channel domain to front
-                image = image.swapaxes(0,2)
-                # swap time and z 
-                image = image.swapaxes(1,2)
-                print(np.shape(image))
-            
-            print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
-            
-            data = image
-            output_dir = output_path
-            os.chdir(output_dir)    
-            
-            # tmp_file for read/write
-            tmp_path = str(output_dir + '//tmp_data//')
-            
-            # reference channel is channel 1, where the nuclei are imaged
-            ref_channel = int(ref_channel)
-            
-            # read in raw data as dask array
-            new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
-            data = data.rechunk(new_shape)
-            print('Imge imported')
-            
-            # write data to tmp_file
-            data = write_tmp_data_to_disk(tmp_path, data, new_shape)
-
-            # Run the method 
-            if correct_xy == True: 
-                xy_drift = get_xy_drift(data, ref_channel)
-                tmp_data = apply_xy_drift(data, xy_drift)
-                # save intermediate results to temporary npy file
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
-            else: 
-                tmp_data = data
-                xy_drift = np.asarray([[0,0]])
-            
-            if correct_z == True: 
-                # Correct z-drift
-                z_drift = get_z_drift(data, ref_channel)
-                tmp_data = apply_z_drift(tmp_data, z_drift)
-
-                # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
-
-                
-            else: 
-                z_drift = np.asarray([[0,0]])
-            
-            if  crop_output == True: 
-                # Crop, according to drift
-                tmp_data = crop_data(tmp_data, xy_drift, z_drift)
-                new_shape = (np.shape(tmp_data)[0],1,np.shape(tmp_data)[-3],np.shape(tmp_data)[-2],np.shape(tmp_data)[-1])
-                
-                # save intermediate result
-                crop_path = output_dir +"//cropped_tmp_data"
-                da.to_npy_stack(crop_path,tmp_data, axis = 1)
-                del tmp_data
-                shutil.rmtree(tmp_path)
-                shutil.move(crop_path, tmp_path)
-                tmp_data = read_tmp_data(tmp_path, new_shape)
-
-            
-            if correct_center_rotation == True: 
-                # Correct Rotation 
-                alpha = get_rotation(tmp_data, ref_channel)
-                tmp_data = apply_alpha_drift(tmp_data, alpha)
-                
-                # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
-
-            else: 
-                alpha = [0]
-            
-            if export_csv == True:
-                # Export .csv
-                print("Export drifts to csv.")
-                x = pd.DataFrame({'x-drift': xy_drift[:,0]})
-                y = pd.DataFrame({'y-drift': xy_drift[:,1]})
-                z = pd.DataFrame({'z-drift': z_drift[:,0]})
-                r = pd.DataFrame({'rotation': alpha})
-                df = pd.concat([x,y,z,r], axis=1)
-                df = df.fillna(0)
-                df.to_csv("drifts.csv")
-            
-            # write results to tif
-            export_path = output_dir + "/registered.tif"
-            tifffile.imwrite(export_path, tmp_data, ome=True)
-            
-            print('Rigid Fast4D Registration complete.')
-            print("--- %s seconds ---" % (time.time() - start_time))
-
-            return tmp_data
         
         # grab viewer
         viewer = napari.current_viewer()
