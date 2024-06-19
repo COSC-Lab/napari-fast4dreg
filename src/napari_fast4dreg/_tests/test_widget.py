@@ -1,6 +1,7 @@
 import numpy as np
 import tifffile 
 import napari 
+from enum import Enum
 
 from napari_fast4dreg._widget import Fast4DReg_widget 
 
