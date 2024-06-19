@@ -1,9 +1,7 @@
 import numpy as np
 import tifffile 
 
-from napari_fast4dreg._widget import (
-    Fast4DReg_widget
-)
+from napari_fast4dreg._widget import Fast4DReg_widget
 
 def test_Fast4DReg_widget():
     test_image = tifffile.imread('test_input.tif')
