@@ -78,13 +78,15 @@ def Fast4DReg_widget(
     crop_output = True, 
     export_csv = True 
     ):
-    
-    
+
+    # check how many operations need to be done 
+    n_steps = int(correct_xy+correct_z + correct_center_rotation + crop_output + export_csv) 
+    n_steps = n_steps + 2 # import and export need to be added too 
+          
     # start timer
-    
     with tqdm() as pbar:
         
-        @thread_worker(connect={"finished": lambda: pbar._get_progressbar()})
+        @thread_worker(connect={"finished": lambda: pbar.progressbar.hide()})
         def run_pipeline(image, 
                             axes, 
                             output_path, 
@@ -128,17 +130,18 @@ def Fast4DReg_widget(
             # read in raw data as dask array
             new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
             data = data.rechunk(new_shape)
-            print('Imge imported')
             
             # write data to tmp_file
             data = write_tmp_data_to_disk(tmp_path, data, new_shape)
-
+            print('Imge imported')
+            yield pbar.update(1)
             # Run the method 
             if correct_xy == True: 
                 xy_drift = get_xy_drift(data, ref_channel)
                 tmp_data = apply_xy_drift(data, xy_drift)
                 # save intermediate results to temporary npy file
                 tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+                yield pbar.update(1)
             else: 
                 tmp_data = data
                 xy_drift = np.asarray([[0,0]])
@@ -151,6 +154,7 @@ def Fast4DReg_widget(
                 # save intermediate result
                 tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
 
+                yield pbar.update(1)
                 
             else: 
                 z_drift = np.asarray([[0,0]])
@@ -168,6 +172,7 @@ def Fast4DReg_widget(
                 shutil.move(crop_path, tmp_path)
                 tmp_data = read_tmp_data(tmp_path, new_shape)
 
+                yield pbar.update(1)
             
             if correct_center_rotation == True: 
                 # Correct Rotation 
@@ -177,6 +182,8 @@ def Fast4DReg_widget(
                 # save intermediate result
                 tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
 
+                yield pbar.update(1)
+                
             else: 
                 alpha = [0]
             
@@ -190,7 +197,8 @@ def Fast4DReg_widget(
                 df = pd.concat([x,y,z,r], axis=1)
                 df = df.fillna(0)
                 df.to_csv("drifts.csv")
-            
+                
+                yield pbar.update(1)
             # write results to tif
             export_path = output_dir + "/registered.tif"
             tifffile.imwrite(export_path, tmp_data, ome=True)
@@ -203,7 +211,7 @@ def Fast4DReg_widget(
                 tmp_data = tmp_data.swapaxes(0,1)
                 tmp_data = tmp_data.swapaxes(1,2)
                 print(np.shape(tmp_data))            
-            
+            yield pbar.update(1)
             return tmp_data
         # grab viewer
         viewer = napari.current_viewer()
