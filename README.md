@@ -12,10 +12,6 @@ This is a python port of the original Fast4DReg Fiji Plugin, with added rotation
 The original paper can be found here:
 https://journals.biologists.com/jcs/article/136/4/jcs260728/287682/Fast4DReg-fast-registration-of-4D-microscopy
 
-## Example Outcome
-![3D_plane_registration](https://github.com/Macl-I/napari-fast4dreg/assets/147622604/39b1bf98-8d74-4568-8669-b0968a22d016)
-![3D_registration](https://github.com/Macl-I/napari-fast4dreg/assets/147622604/acb9c2bc-535f-4be3-b885-e8359593fa35)
-
 ----------------------------------
 
 This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
@@ -44,9 +40,22 @@ Don't worry if your file is big, napari already internally uses dask to open eve
 4) In the axes row, choose the structure of your input image. If your axis orientation is correct in ImageJ choose the standard TZCYX (ImageJ) orientation. If you are using python to process the image you probabbly are using the alternatively availabe CTZYX orientation. In this case just select CTZYX in the drop down menue instead.
 5) Select the reference channel used for the registration. The drift will be determined for this reference channel and applied to all other channels. Counting begins by 0. In case for the test image we select the nuclear signal in channel 1.
 6) Select the corrections that you want to apply on your image. Note that the crop function reduces only in xy, according to the previously determined drift. (e.g. drift = -5 in x --> drop 5 pixels from the left hand side of the registered stack.)
-7) Wait for output (this may take a while).
+7) Wait for output (this may take a while, so go and get a coffe or tea).
 8) Enjoy your registered image.
 
+
+## Example Outcome
+The output will consist of the following (if chosen): 
+- registered.tif: The registered file, output of this image registration pipeline.
+- tmp_data: This folder was used for temporary data saving and stores at the end the registered image in a chunked manner (can be deleted or dragged into napari for a greater data versitility)
+- drifts.csv: csv table, home to the drift of all corrected variables, if you prefer your own plotting style, here is where you find the pure drif table.
+- XY-Drift.svg: Vector based graphic, visualising the dirft in lateral direction. The svg format can be opened by your web browser or directly imported to powerpoint. Key advantage of .svg instead of .png: You can resize any way you like without loss of image quality.
+- Z-Drift.svg: Vector based graphic, visualising the dirft in axial direction.
+- Rotation-Drift.svg: Showing rotation correction of the image in lateral direction.
+
+![XY-Drift]("./example_files/XY-Drift.svg)
+![Z-Drift]("./example_files/Z-Drift.svg)
+![Rotation-Drift]("./example_files/Rotation-Drift.svg)
 
 ## Contributing
 
