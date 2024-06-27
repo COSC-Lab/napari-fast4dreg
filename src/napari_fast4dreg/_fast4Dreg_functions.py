@@ -47,7 +47,7 @@ def get_xy_drift(_data, ref_channel):
     plt.legend()
     plt.xlabel('Timesteps')
     plt.ylabel('Drift in pixel')
-    plt.savefig('XY-Drfit.svg')
+    plt.savefig('XY-Drift.svg')
     plt.clf()
     return shifts_xy
 
