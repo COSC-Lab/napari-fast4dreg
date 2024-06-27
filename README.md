@@ -44,7 +44,7 @@ Don't worry if your file is big, napari already internally uses dask to open eve
 4) In the axes row, choose the structure of your input image. If your axis orientation is correct in ImageJ choose the standard TZCYX (ImageJ) orientation. If you are using python to process the image you probabbly are using the alternatively availabe CTZYX orientation. In this case just select CTZYX in the drop down menue instead.
 5) Select the reference channel used for the registration. The drift will be determined for this reference channel and applied to all other channels. Counting begins by 0. In case for the test image we select the nuclear signal in channel 1.
 6) Select the corrections that you want to apply on your image. Note that the crop function reduces only in xy, according to the previously determined drift. (e.g. drift = -5 in x --> drop 5 pixels from the left hand side of the registered stack.)
-7) Wait for output (this may take a while).
+7) Wait for output (this may take a while, so go and get a coffe or tea).
 8) Enjoy your registered image.
 
 
