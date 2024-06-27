@@ -79,9 +79,9 @@ def Fast4DReg_widget(
     export_csv = True 
     ):
 
-    # check how many operations need to be done 
-    n_steps = int(correct_xy+correct_z + correct_center_rotation + crop_output + export_csv) 
-    n_steps = n_steps + 2 # import and export need to be added too 
+    # Code for proper progress bar. Propbably requires more intense rewriting tho
+    # n_steps = int(correct_xy+correct_z + correct_center_rotation + crop_output + export_csv) 
+    # n_steps = n_steps + 2 # import and export need to be added too 
           
     # start timer
     with tqdm() as pbar:
@@ -103,21 +103,31 @@ def Fast4DReg_widget(
 
             # rephrase variables 
             image = da.asarray(image)
+            
+            # check for multichannel nature 
+            if len(image.shape) == 4: 
+                # --> new image shape is now TZYX for both cases
+                # extend image to fit processing format of CTZYX
+                data = da.asarray([image])
+                # set ref_channel to 0, since its the only existing channel
+                # this effectively overwrites user input, making it irrelevant 
+                ref_channel = 0
+                print('Single-Channel Image detected \nNew Shape: ', image.shape)
 
-            ## reorder image if necessary: 
-
-            if axes.value == 0: 
-                image = image
-            if axes.value == 1: 
-                # move channel domain to front
-                image = image.swapaxes(0,2)
-                # swap time and z 
-                image = image.swapaxes(1,2)
-                print(np.shape(image))
+            else: 
+                # process as multichannel
+                ## reorder image if necessary: 
+                if axes.value == 0: 
+                    data = image
+                if axes.value == 1: 
+                    # move channel domain to front
+                    image = image.swapaxes(0,2)
+                    # swap time and z 
+                    data = image.swapaxes(1,2)
+                    print(np.shape(data))
             
             print('Reshaped order of the imput image (supposed to be CTZYX): {}'.format(np.shape(image))) 
             
-            data = image
             output_dir = output_path
             os.chdir(output_dir)    
             
@@ -126,6 +136,10 @@ def Fast4DReg_widget(
             
             # reference channel is channel 1, where the nuclei are imaged
             ref_channel = int(ref_channel)
+            
+            # if ref_channel index out of range take the last channel of the image
+            if ref_channel > len(data[0]): 
+                ref_channel = len(data[0])
             
             # read in raw data as dask array
             new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
@@ -207,11 +221,15 @@ def Fast4DReg_widget(
             print("--- %s seconds ---" % (time.time() - start_time))
 
             # move axis back to ImageJ format if necessary
-            if axes.value == 1: 
-                tmp_data = tmp_data.swapaxes(0,1)
-                tmp_data = tmp_data.swapaxes(1,2)
-                print(np.shape(tmp_data))            
-            yield pbar.update(1)
+            if len(image.shape)!=4: 
+                if axes.value == 1: 
+                    tmp_data = tmp_data.swapaxes(0,1)
+                    tmp_data = tmp_data.swapaxes(1,2)
+                    print(np.shape(tmp_data))            
+                yield pbar.update(1)
+            else: 
+                yield pbar.update(1)
+                
             return tmp_data
         # grab viewer
         viewer = napari.current_viewer()
