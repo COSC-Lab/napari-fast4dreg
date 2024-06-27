@@ -34,7 +34,7 @@ You can install `napari-fast4dreg` via [pip]:
 
 It's easy! 
 1) Just drag and drop your image, or the test image from this repository, into napari and open it normally. 
-Don't worry if your file is big, napari already internally uses dask to open even the biggest images (althought it might hurts the performance).
+Don't worry if your file is big, napari already internally uses dask to open even the biggest images (althought it might hurt the performance).
 2) Open the napari-fast4dreg plugin from the plugin menue.
 3) In the image row, make sure your image is selected in the image drop down menue.
 4) In the axes row, choose the structure of your input image. If your axis orientation is correct in ImageJ choose the standard TZCYX (ImageJ) orientation. If you are using python to process the image you probabbly are using the alternatively availabe CTZYX orientation. In this case just select CTZYX in the drop down menue instead.
