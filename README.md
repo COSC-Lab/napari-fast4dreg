@@ -53,10 +53,11 @@ The output will consist of the following (if chosen):
 - Z-Drift.svg: Vector based graphic, visualising the dirft in axial direction.
 - Rotation-Drift.svg: Showing rotation correction of the image in lateral direction.
 
-![XY-Drift]("./example_files/XY-Drift.svg)
-![Z-Drift]("./example_files/Z-Drift.svg)
-![Rotation-Drift]("./example_files/Rotation-Drift.svg)
-
+![XY-Drift](./media/XY-Drift.svg)
+![Z-Drift](./media/Z-Drift.svg)
+![Rotation-Drift](./media/Rotation-Drift.svg)
+![3D_MIP_registration](./media/3D_registration.gif)
+![3D_plane](./media/3D_plane_registration.gif)
 ## Contributing
 
 Contributions are very welcome. Just send me an E-mail: marcel.issler@kuleuven.be or directly submit a pull request.
