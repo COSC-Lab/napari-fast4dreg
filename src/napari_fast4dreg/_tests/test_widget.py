@@ -1,6 +1,7 @@
 import numpy as np
 import tifffile 
 import napari 
+import os 
 from enum import Enum
 
 from napari_fast4dreg._widget import Fast4DReg_widget 
@@ -13,7 +14,8 @@ class Axes(Enum):
 
 def test_Fast4DReg_widget():
     # working path is napari-fast4dreg/napari-fast4dreg/
-    # 
+
+    print(os.getcwd())
     viewer = napari.Viewer()
     test_image = tifffile.imread('example_files/xtitched_organoid_timelapse_ch0_cytosol_ch1_nuclei.tif')
     reference_registered_image = tifffile.imread('example_files/registered.tif')
