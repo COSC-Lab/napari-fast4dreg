@@ -22,15 +22,15 @@ def test_Fast4DReg_widget():
     viewer.add_image(reference_registered_image)
 
     out_folder = os.getcwd() + '//example_files'
-    resgistered_image = Fast4DReg_widget(image = test_image,
-                                        axes = Axes.TZCYX_ImageJ, 
-                                        output_path = out_folder, 
-                                        ref_channel = r"1", 
-                                        correct_xy = True,
-                                        correct_z = True,
-                                        correct_center_rotation = True,
-                                        crop_output = True, 
-                                        export_csv = True )
+    Fast4DReg_widget(   image = test_image,
+                        axes = Axes.TZCYX_ImageJ, 
+                        output_path = out_folder, 
+                        ref_channel = r"1", 
+                        correct_xy = True,
+                        correct_z = True,
+                        correct_center_rotation = True,
+                        crop_output = True, 
+                        export_csv = True )
     
     # get layer data 
     layers = viewer.layers()
