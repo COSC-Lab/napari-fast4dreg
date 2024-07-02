@@ -29,7 +29,7 @@ You can install `napari-fast4dreg` via [pip]:
 
     pip install napari-fast4dreg
 
-## Useage 
+## Usage 
 
 It's easy! 
 1) Just drag and drop your image, or the test image from this repository, into napari and open it normally. 
