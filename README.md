@@ -14,7 +14,6 @@ https://journals.biologists.com/jcs/article/136/4/jcs260728/287682/Fast4DReg-fas
 
 ----------------------------------
 
-This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
 
 <!--
 Don't miss the full getting started guide to set up your new package:
@@ -62,6 +61,9 @@ The output will consist of the following (if chosen):
 ## Contributing
 
 Contributions are very welcome. Just send me an E-mail: marcel.issler@kuleuven.be or directly submit a pull request.
+
+## Credit 
+This [napari] plugin was generated with [Cookiecutter] using [@napari]'s [cookiecutter-napari-plugin] template.
 
 ## License
 
