@@ -33,6 +33,6 @@ def test_Fast4DReg_widget():
                         export_csv = True )
     
     # get layer data 
-    layers = viewer.layers()
+    layers = viewer.layers
     
-    assert layers[0].data == layers[-1].data
+    assert layers[0].data.all() == layers[-1].data.all()

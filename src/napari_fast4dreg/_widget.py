@@ -133,7 +133,7 @@ def Fast4DReg_widget(
             
             # tmp_file for read/write
             tmp_path = str(output_dir + '//tmp_data//')
-            
+                        
             # reference channel is channel 1, where the nuclei are imaged
             ref_channel = int(ref_channel)
             
@@ -213,12 +213,6 @@ def Fast4DReg_widget(
                 df.to_csv("drifts.csv")
                 
                 yield pbar.update(1)
-            # write results to tif
-            export_path = output_dir + "/registered.tif"
-            tifffile.imwrite(export_path, tmp_data, ome=True)
-            
-            print('Rigid Fast4D Registration complete.')
-            print("--- %s seconds ---" % (time.time() - start_time))
 
             # move axis back to ImageJ format if necessary
             if len(image.shape)!=4: 
@@ -230,6 +224,15 @@ def Fast4DReg_widget(
             else: 
                 yield pbar.update(1)
                 
+            
+             # write results to tif
+            export_path = output_dir + "/registered.tif"
+            tifffile.imwrite(export_path, tmp_data, ome=True)
+            
+            # print report
+            print('Rigid Fast4D Registration complete.')
+            print("--- %s seconds ---" % (time.time() - start_time))        
+            
             return tmp_data
         # grab viewer
         viewer = napari.current_viewer()
