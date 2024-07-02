@@ -21,7 +21,7 @@ def test_Fast4DReg_widget():
     reference_registered_image = tifffile.imread('example_files/registered.tif')
     viewer.add_image(reference_registered_image)
 
-    out_folder = 'example_files'
+    out_folder = os.getcwd() + '//example_files'
     resgistered_image = Fast4DReg_widget(image = test_image,
                                         axes = Axes.TZCYX_ImageJ, 
                                         output_path = out_folder, 
