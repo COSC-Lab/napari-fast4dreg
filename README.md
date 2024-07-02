@@ -34,7 +34,7 @@ You can install `napari-fast4dreg` via [pip]:
 
 It's easy! 
 1) Just drag and drop your image, or the test image from this repository, into napari and open it normally. 
-Don't worry if your file is big, napari already internally uses dask to open even the biggest images (althought it might hurts the performance).
+Don't worry if your file is big, napari already internally uses dask to open even the biggest images (althought it might hurt the performance).
 2) Open the napari-fast4dreg plugin from the plugin menue.
 3) In the image row, make sure your image is selected in the image drop down menue.
 4) In the axes row, choose the structure of your input image. If your axis orientation is correct in ImageJ choose the standard TZCYX (ImageJ) orientation. If you are using python to process the image you probabbly are using the alternatively availabe CTZYX orientation. In this case just select CTZYX in the drop down menue instead.
@@ -53,10 +53,11 @@ The output will consist of the following (if chosen):
 - Z-Drift.svg: Vector based graphic, visualising the dirft in axial direction.
 - Rotation-Drift.svg: Showing rotation correction of the image in lateral direction.
 
-![XY-Drift]("./example_files/XY-Drift.svg)
-![Z-Drift]("./example_files/Z-Drift.svg)
-![Rotation-Drift]("./example_files/Rotation-Drift.svg)
-
+![XY-Drift](./media/XY-Drift.svg)
+![Z-Drift](./media/Z-Drift.svg)
+![Rotation-Drift](./media/Rotation-Drift.svg)
+![3D_MIP_registration](./media/3D_registration.gif)
+![3D_plane](./media/3D_plane_registration.gif)
 ## Contributing
 
 Contributions are very welcome. Just send me an E-mail: marcel.issler@kuleuven.be or directly submit a pull request.
