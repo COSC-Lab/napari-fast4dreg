@@ -52,12 +52,13 @@ The output will consist of the following (if chosen):
 - XY-Drift.svg: Vector based graphic, visualising the dirft in lateral direction. The svg format can be opened by your web browser or directly imported to powerpoint. Key advantage of .svg instead of .png: You can resize any way you like without loss of image quality.
 - Z-Drift.svg: Vector based graphic, visualising the dirft in axial direction.
 - Rotation-Drift.svg: Showing rotation correction of the image in lateral direction.
-
+  
+![3D_MIP_registration](./media/3D_registration.gif)
+![3D_plane](./media/3D_plane_registration.gif)
 ![XY-Drift](./media/XY-Drift.svg)
 ![Z-Drift](./media/Z-Drift.svg)
 ![Rotation-Drift](./media/Rotation-Drift.svg)
-![3D_MIP_registration](./media/3D_registration.gif)
-![3D_plane](./media/3D_plane_registration.gif)
+
 ## Contributing
 
 Contributions are very welcome. Just send me an E-mail: marcel.issler@kuleuven.be or directly submit a pull request.
