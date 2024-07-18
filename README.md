@@ -25,7 +25,7 @@ https://napari.org/stable/plugins/index.html
 ## Suggested Changes
 - [ ] add environment setup and full install of miniconda etc to install section
 - [ ] implement zarr storage instead of
-- [ ] test alternative affine transform functions, such as ITK or CV
+- [ ] test alternative affine transform functions, such as simpple-ITK or openCV
 - [ ] consinder adding cuda support (nvidia gpu only)
 ## Installation
 
