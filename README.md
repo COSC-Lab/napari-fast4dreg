@@ -22,7 +22,11 @@ https://github.com/napari/cookiecutter-napari-plugin#getting-started
 and review the napari docs for plugin developers:
 https://napari.org/stable/plugins/index.html
 -->
-
+## Suggested Changes
+- [] add environment setup and full install of miniconda etc to install section
+- [] implement zarr storage instead of
+- [] test alternative affine transform functions, such as ITK or CV
+- [] consinder adding cuda support (nvidia gpu only)
 ## Installation
 
 You can install `napari-fast4dreg` via [pip]:
