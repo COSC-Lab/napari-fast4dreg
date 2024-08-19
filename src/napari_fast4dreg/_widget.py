@@ -142,9 +142,10 @@ def Fast4DReg_widget(
                 ref_channel = len(data[0])
             
             # read in raw data as dask array
-            new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
-            data = data.rechunk(new_shape)
-            
+            #new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
+            data = data.rechunk('auto')
+            new_shape = data.chunksize
+                                
             # write data to tmp_file
             data = write_tmp_data_to_disk(tmp_path, data, new_shape)
             print('Imge imported')
