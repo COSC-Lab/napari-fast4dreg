@@ -9,9 +9,10 @@ import dask
 import dask.array as da
 import matplotlib.pyplot as plt
 from skimage.registration import phase_cross_correlation
-from skimage.transform import warp_polar
-from skimage.transform import AffineTransform
-from scipy.ndimage import affine_transform, rotate 
+from skimage.transform import warp_polar, AffineTransform
+# from scipy.ndimage import affine_transform, rotate 
+from dask_image.ndinterp import affine_transform, rotate
+from dask.diagnostics import ProgressBar
 # Utility
 from tqdm import tqdm
 import tifffile 
@@ -53,7 +54,7 @@ def get_xy_drift(_data, ref_channel):
 
 def get_z_drift(_data, ref_channel):
     z_movie = da.average(da.swapaxes(_data[ref_channel], 2,1), axis = 1).compute() 
-
+    
     # correct XY, relative to first frame:
     print('Determining drift in Z')
     shifts, error, phasediff = [], [], []
@@ -101,10 +102,10 @@ def translate_stack(_image, _shift):
         for z,Z in enumerate(C):
             
             # here is the delayed function that allows to scatter everthing nicely across workers
-            _out_stack.append(dask.delayed(affine_transform)(Z, np.array(tform)))
+            _out_stack.append(affine_transform(Z, np.array(tform)))
         
         # format arrays for proper export
-        _out_stack = da.stack([da.from_delayed(x, shape=np.shape(Z), dtype=np.dtype(Z)) for x in _out_stack])
+        _out_stack = da.stack(_out_stack)
         _image_out.append(_out_stack)
 
     return da.stack(_image_out)
@@ -143,10 +144,10 @@ def rotate_stack(_image, _alpha):
         for z,Z in enumerate(C):
             
             # here is the delayed function that allows to scatter everthing nicely across workers
-            _out_stack.append(dask.delayed(rotate)(Z, -_alpha,reshape=False))
+            _out_stack.append(rotate(Z, -_alpha,reshape=False))
         
         # format arrays for proper export
-        _out_stack = da.stack([da.from_delayed(x, shape=np.shape(Z), dtype=np.dtype(Z)) for x in _out_stack])
+        _out_stack = da.stack(_out_stack)
         _image_out.append(_out_stack)
 
     return da.stack(_image_out)
@@ -154,7 +155,7 @@ def rotate_stack(_image, _alpha):
 
 
 def apply_z_drift(_data, z_drift):
-    
+
     # swap axes around
     _data = da.swapaxes(_data, 0,1)
     _data = da.swapaxes(_data, 3,2)
@@ -238,16 +239,27 @@ def apply_alpha_drift(_data, alpha_drift):
 
     return _data_out
 
-def write_tmp_data_to_disk(_path, _file, _new_shape): 
-    print('Save intermediate results to temporary .npy file.')
-    da.to_npy_stack(_path, _file, axis = 1)
-    _file_reloaded = da.from_npy_stack(_path, mmap_mode='r+').rechunk(_new_shape)
-    return _file_reloaded
+def write_tmp_data_to_disk(_path, _file, _current_file_path_index ,_new_shape='auto'): 
+    print('Compute and save intermediate results to .zarr file on disk.')
+    
+    # check if current path is data or data2:
+    # example file path: '.../tmp_data.zarr'
+    
+    if _current_file_path_index is not 1: 
+        _current_file_path_index = 1
+        _path = _path.split('tmp_data.zarr')[0] + 'tmp_data_2.zarr'
+    
+    else: 
+        _current_file_path_index = 2
+        
+    # writes with current shape and loads with a new one.
+    with ProgressBar():
+        da.to_zarr(_file,_path, overwrite = True)
+    _file_reloaded = da.from_zarr(_path).rechunk(_new_shape)
+    
+    return _file_reloaded, _current_file_path_index
 
 
-def read_tmp_data(_path, _new_shape): 
-    _file_loaded = da.from_npy_stack(_path, mmap_mode='r+').rechunk(_new_shape)
-    return _file_loaded
 # Benchmarking notes: 
 # File with 3.2Gb size, two channels, 21 timepoints,
 # and 162 slices of 512, 512 pixels took 177.85 seconds (ca. 3 min)

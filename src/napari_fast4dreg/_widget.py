@@ -44,7 +44,7 @@ from ._fast4Dreg_functions import get_xy_drift, apply_xy_drift
 from ._fast4Dreg_functions import get_z_drift, apply_z_drift
 from ._fast4Dreg_functions import get_rotation, apply_alpha_drift
 from ._fast4Dreg_functions import crop_data
-from ._fast4Dreg_functions import read_tmp_data, write_tmp_data_to_disk
+from ._fast4Dreg_functions import write_tmp_data_to_disk
 
 from magicgui.tqdm import tqdm
 from dask import delayed
@@ -132,7 +132,7 @@ def Fast4DReg_widget(
             os.chdir(output_dir)    
             
             # tmp_file for read/write
-            tmp_path = str(output_dir + '//tmp_data//')
+            tmp_path = str(output_dir + '//tmp_data.zarr')
                         
             # reference channel is channel 1, where the nuclei are imaged
             ref_channel = int(ref_channel)
@@ -143,31 +143,41 @@ def Fast4DReg_widget(
             
             # read in raw data as dask array
             #new_shape = (np.shape(data)[0],1,np.shape(data)[-3],np.shape(data)[-2],np.shape(data)[-1])
-            data = data.rechunk('auto')
-            new_shape = data.chunksize
+            
+            # since our operations are plane wise, we need to chunk via planes. 
+            # because planes might be too big for memmory we need to limit these too
+            # This will prevent from rewriting files on disk that are not to be changed yet
+            new_shape = np.asarray(([1,1,1,256,256]))
+            data = data.rechunk(new_shape)
                                 
             # write data to tmp_file
-            data = write_tmp_data_to_disk(tmp_path, data, new_shape)
-            print('Imge imported')
+            file_path_index = 1 # set this to two, so the next file tmp_data_2.zarr
+            data, file_path_index = write_tmp_data_to_disk(tmp_path, data, file_path_index, new_shape)
+            print('Image imported')
             yield pbar.update(1)
+            
             # Run the method 
             if correct_xy == True: 
+                
+                # Correct xy-drift
                 xy_drift = get_xy_drift(data, ref_channel)
                 tmp_data = apply_xy_drift(data, xy_drift)
+                
                 # save intermediate results to temporary npy file
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+                tmp_data, file_path_index = write_tmp_data_to_disk(tmp_path, tmp_data, file_path_index, new_shape)
                 yield pbar.update(1)
+                
             else: 
                 tmp_data = data
                 xy_drift = np.asarray([[0,0]])
             
-            if correct_z == True: 
+            if  correct_z == True: 
                 # Correct z-drift
                 z_drift = get_z_drift(data, ref_channel)
                 tmp_data = apply_z_drift(tmp_data, z_drift)
 
                 # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+                tmp_data, file_path_index = write_tmp_data_to_disk(tmp_path, tmp_data, file_path_index, new_shape)
 
                 yield pbar.update(1)
                 
@@ -180,22 +190,17 @@ def Fast4DReg_widget(
                 new_shape = (np.shape(tmp_data)[0],1,np.shape(tmp_data)[-3],np.shape(tmp_data)[-2],np.shape(tmp_data)[-1])
                 
                 # save intermediate result
-                crop_path = output_dir +"//cropped_tmp_data"
-                da.to_npy_stack(crop_path,tmp_data, axis = 1)
-                del tmp_data
-                shutil.rmtree(tmp_path)
-                shutil.move(crop_path, tmp_path)
-                tmp_data = read_tmp_data(tmp_path, new_shape)
+                tmp_data, file_path_index = write_tmp_data_to_disk(tmp_path, tmp_data, file_path_index, new_shape)
 
                 yield pbar.update(1)
             
-            if correct_center_rotation == True: 
+            if  correct_center_rotation == True: 
                 # Correct Rotation 
                 alpha = get_rotation(tmp_data, ref_channel)
                 tmp_data = apply_alpha_drift(tmp_data, alpha)
                 
                 # save intermediate result
-                tmp_data = write_tmp_data_to_disk(tmp_path, tmp_data, new_shape)
+                tmp_data, file_path_index = write_tmp_data_to_disk(tmp_path, tmp_data, file_path_index, new_shape)
 
                 yield pbar.update(1)
                 
