@@ -157,8 +157,15 @@ def Fast4DReg_widget(
             # consider using auto here, since it will make everthing homogeneous.
             # however to speed up the code we chunk it like this instead, most of the operations are planar anyway.
             # Z correction will take the longest by far.
-            new_shape = np.asarray(([1,1,1,256,256]))
-            data = data.rechunk(new_shape)
+            # new_shape = np.asarray(([1,1,1,256,256]))
+            # 
+            # 
+            # this appraoch takes way to long...
+            # new_shape = data.chu
+            # data = data.rechunk(new_shape)
+            
+            data = data.rechunk('auto')
+            new_shape = data.chunksize
                                 
             # write data to tmp_file
             file_path_index = 1 # set this to two, so the next file tmp_data_2.zarr
