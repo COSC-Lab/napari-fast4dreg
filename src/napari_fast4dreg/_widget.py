@@ -147,6 +147,9 @@ def Fast4DReg_widget(
             # since our operations are plane wise, we need to chunk via planes. 
             # because planes might be too big for memmory we need to limit these too
             # This will prevent from rewriting files on disk that are not to be changed yet
+            # consider using auto here, since it will make everthing homogeneous.
+            # however to speed up the code we chunk it like this instead, most of the operations are planar anyway.
+            # Z correction will take the longest by far.
             new_shape = np.asarray(([1,1,1,256,256]))
             data = data.rechunk(new_shape)
                                 
