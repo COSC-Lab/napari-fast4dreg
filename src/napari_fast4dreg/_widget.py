@@ -60,18 +60,24 @@ if TYPE_CHECKING:
 # a widget.
 
 class Axes(Enum):
-    """str for various media and their refractive indices."""
+    """str for various configurations and their working indices."""
 
     CTZYX = 0
     TZCYX_ImageJ = 1
 
+class Mode(Enum):
+    """str for various media and their refractive indices."""
 
+    Mean = 'mean'
+    Max = 'max'
+    Median = 'median'
 
 def Fast4DReg_widget(
     image: "napari.types.ImageData",
     axes = Axes.TZCYX_ImageJ, 
     output_path = r"E:\Data_Leuven\Fast4DReg_Dask\plugin_output_trial", 
     ref_channel = r"1", 
+    registration_mode = Mode.Mean,
     correct_xy = True,
     correct_z = True,
     correct_center_rotation = True,
@@ -90,7 +96,8 @@ def Fast4DReg_widget(
         def run_pipeline(image, 
                             axes, 
                             output_path, 
-                            ref_channel, 
+                            ref_channel,
+                            registration_mode,
                             correct_xy, 
                             correct_z, 
                             correct_center_rotation, 
@@ -163,7 +170,7 @@ def Fast4DReg_widget(
             if correct_xy == True: 
                 
                 # Correct xy-drift
-                xy_drift = get_xy_drift(data, ref_channel)
+                xy_drift = get_xy_drift(data, ref_channel, registration_mode)
                 tmp_data = apply_xy_drift(data, xy_drift)
                 
                 # save intermediate results to temporary npy file
@@ -176,7 +183,7 @@ def Fast4DReg_widget(
             
             if  correct_z == True: 
                 # Correct z-drift
-                z_drift = get_z_drift(data, ref_channel)
+                z_drift = get_z_drift(data, ref_channel, registration_mode)
                 tmp_data = apply_z_drift(tmp_data, z_drift)
 
                 # save intermediate result
@@ -199,7 +206,7 @@ def Fast4DReg_widget(
             
             if  correct_center_rotation == True: 
                 # Correct Rotation 
-                alpha = get_rotation(tmp_data, ref_channel)
+                alpha = get_rotation(tmp_data, ref_channel, registration_mode)
                 tmp_data = apply_alpha_drift(tmp_data, alpha)
                 
                 # save intermediate result
@@ -251,6 +258,7 @@ def Fast4DReg_widget(
                          axes, 
                          output_path, 
                          ref_channel, 
+                         registration_mode,
                          correct_xy, 
                          correct_z, 
                          correct_center_rotation,

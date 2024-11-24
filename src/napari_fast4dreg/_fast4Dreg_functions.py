@@ -19,9 +19,15 @@ import tifffile
 import sys
 import os
 
-def get_xy_drift(_data, ref_channel):
-    xy_movie = da.average(_data[ref_channel], axis = 1).compute()
-
+def get_xy_drift(_data, ref_channel, _registration_mode):
+    
+    if _registration_mode == 'mean': 
+        xy_movie = da.average(_data[ref_channel], axis = 1).compute()
+    elif _registration_mode == 'max': 
+        xy_movie = da.max(_data[ref_channel], axis = 1).compute()
+    elif _registration_mode == 'median': 
+        xy_movie = da.max(_data[ref_channel], axis = 1).compute()
+        
     # correct XY, relative to first frame:
     print('Determining drift in XY')
     shifts, error, phasediff = [], [], []
@@ -52,9 +58,16 @@ def get_xy_drift(_data, ref_channel):
     plt.clf()
     return shifts_xy
 
-def get_z_drift(_data, ref_channel):
-    z_movie = da.average(da.swapaxes(_data[ref_channel], 2,1), axis = 1).compute() 
+def get_z_drift(_data, ref_channel, _registration_mode):
     
+    if _registration_mode == 'mean': 
+        z_movie = da.average(da.swapaxes(_data[ref_channel], 2,1), axis = 1).compute() 
+    elif _registration_mode == 'max': 
+        z_movie = da.max(da.swapaxes(_data[ref_channel], 2,1), axis = 1).compute() 
+    elif _registration_mode == 'median':
+        z_movie = da.median(da.swapaxes(_data[ref_channel], 2,1), axis = 1).compute() 
+        
+        
     # correct XY, relative to first frame:
     print('Determining drift in Z')
     shifts, error, phasediff = [], [], []
@@ -184,9 +197,15 @@ def crop_data(data, xy_drift, z_drift):
                                                 x_crop[0]:x_crop[1]]
     return cropped
 
-def get_rotation(data, ref_channel):
-    xy_movie = da.average(data[ref_channel], axis = 1).compute()
+def get_rotation(data, ref_channel, _registration_mode):
     
+    if _registration_mode == 'mean':
+        xy_movie = da.average(data[ref_channel], axis = 1).compute()
+    elif _registration_mode == 'max':
+        xy_movie = da.max(data[ref_channel], axis = 1).compute()
+    elif _registration_mode == 'median': 
+        xy_movie = da.median(data[ref_channel], axis = 1).compute()
+        
     # get image radius
     radius = int(min(da.shape(data)[3], da.shape(data)[4])/2)
 
@@ -245,7 +264,7 @@ def write_tmp_data_to_disk(_path, _file, _current_file_path_index ,_new_shape='a
     # check if current path is data or data2:
     # example file path: '.../tmp_data.zarr'
     
-    if _current_file_path_index is not 1: 
+    if _current_file_path_index != 1: 
         _current_file_path_index = 1
         _path = _path.split('tmp_data.zarr')[0] + 'tmp_data_2.zarr'
     
