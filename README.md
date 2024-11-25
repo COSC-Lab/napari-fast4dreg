@@ -24,9 +24,9 @@ https://napari.org/stable/plugins/index.html
 -->
 ## Suggested Changes
 - [ ] add environment setup and full install of miniconda etc to install section
-- [ ] implement zarr storage instead of npy stacks
-- [ ] test alternative affine transform functions, such as simpple-ITK or openCV
-- [ ] consinder adding cuda support (nvidia gpu only)
+- [x] implement zarr storage instead of npy stacks - Using alternating files to store intermediate data (consider moving to one file)
+- [x] test alternative affine transform functions, such as simpple-ITK or openCV - settled for dask_image (gpu supported), consider looking up enforcing gpu usage
+- [x] consinder adding cuda support (nvidia gpu only) - replaced by dask_image
 ## Installation
 
 You can install `napari-fast4dreg` via [pip]:
