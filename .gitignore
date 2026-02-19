@@ -82,3 +82,12 @@ venv/
 
 # written by setuptools_scm
 **/_version.py
+
+# Fast4DReg temporary and output files
+tmp_data/
+tmp_data_*/
+*.zarr/
+registered.tif
+registered.zarr/
+drift_analysis.png
+api_output_*/

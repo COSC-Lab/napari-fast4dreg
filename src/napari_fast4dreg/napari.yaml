@@ -20,7 +20,7 @@ contributions:
       title: Load sample data from Fast4DReg
     - id: napari-fast4dreg.make_function_widget
       python_name: napari_fast4dreg:Fast4DReg_widget
-      title: Make threshold function widget
+      title: Fast4DReg Registration
 
   readers:
     - command: napari-fast4dreg.get_reader
@@ -39,6 +39,6 @@ contributions:
       key: unique_id.1
   widgets:
     - command: napari-fast4dreg.make_function_widget
-      autogenerate: true
-      display_name: fast4dreg
+      display_name: Fast4DReg
+      autogenerate: false
 
