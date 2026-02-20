@@ -35,9 +35,7 @@ This is a Python port of the original Fast4DReg Fiji Plugin, with added rotation
 
 ![3D_plane_registration](./media/3D_plane_registration_scalebar_time_stamped.gif)
 ![3D_MIP_registration](./media/3D_mip_registration_scalebar_time_stamped.gif)
-![XY-Drift](./media/XY-Drift.svg)
-![Z-Drift](./media/Z-Drift.svg)
-![Rotation-Drift](./media/Rotation-Drift.svg)
+![Output Overview](./media/drift_analysis.png)
 
 ## Installation
 
