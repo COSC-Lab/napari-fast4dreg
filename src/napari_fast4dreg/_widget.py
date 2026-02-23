@@ -165,7 +165,7 @@ class Fast4DRegWidget(Container):
             annotation=bool,
             label="Enable GPU Acceleration",
             name="gpu_enabled",
-            value=False
+            value=True
         )
         self.gpu_enabled.changed.connect(self._on_gpu_toggle)
 
@@ -331,7 +331,7 @@ class Fast4DRegWidget(Container):
                     registered_data = da.from_zarr(str(zarr_path))
                     # Compute to numpy for napari (napari handles dask arrays well too)
                     print(f"Adding registered image to napari viewer (shape: {registered_data.shape})")
-                    self.viewer.add_image(registered_data, name="Registered")
+                    self.viewer.add_image(registered_data, name=f"{self.current_layer_name}_registered")
                     print("✓ Registered image added to viewer")
                 else:
                     print(f"Warning: Registered file not found at {zarr_path}")
@@ -596,7 +596,7 @@ class Fast4DRegWidget(Container):
             r_zy = pd.DataFrame({'rotation-zy': gamma_zy if gamma_zy.size > 0 else [0]})
             df = pd.concat([x, y, z, r_xy, r_zx, r_zy], axis=1)
             df = df.fillna(0)
-            df.to_csv(str(output_dir / "drifts.csv"))
+            df.to_csv(str(output_dir / f"{image_layer_name}_drifts.csv"))
             current_step += 1
 
             # Generate plots
@@ -642,7 +642,7 @@ class Fast4DRegWidget(Container):
                 axes[1, 1].grid(True, alpha=0.3)
 
                 plt.tight_layout()
-                plt.savefig(str(output_dir / "drift_analysis.png"), dpi=150, bbox_inches='tight')
+                plt.savefig(str(output_dir / f"{image_layer_name}_drift_analysis.png"), dpi=150, bbox_inches='tight')
                 plt.close()
             except ImportError:
                 print("matplotlib not installed, skipping plots")
