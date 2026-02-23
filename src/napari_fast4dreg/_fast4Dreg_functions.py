@@ -22,7 +22,7 @@ import os
 
 # Optional GPU acceleration with pyclesperanto
 try:
-    import pyclesperanto_prototype as cle
+    import pyclesperanto as cle
     PYCLESPERANTO_AVAILABLE = True
 except ImportError:
     PYCLESPERANTO_AVAILABLE = False
@@ -477,29 +477,29 @@ def _translate_z_stack_gpu(_image, _shift, transform_type):
                 shift_x = float(shift_params[1])
                 # pyclesperanto uses (x, y, z) order, we have (z, y, x)
                 # So translate with translateZ=shift_z, translateX=shift_x
-                result_gpu = cle.translate(gpu_img, translate_x=shift_x, translate_y=0, translate_z=shift_z)
+                result_gpu = cle.rigid_transform(gpu_img, translate_x=shift_x, translate_y=0, translate_z=shift_z)
 
             elif ttype == 'xy':
                 # XY plane translation across entire z-stack
                 shift_y = float(shift_params[0])
                 shift_x = float(shift_params[1])
-                result_gpu = cle.translate(gpu_img, translate_x=shift_x, translate_y=shift_y, translate_z=0)
+                result_gpu = cle.rigid_transform(gpu_img, translate_x=shift_x, translate_y=shift_y, translate_z=0)
 
             elif ttype == 'alpha':
                 # XY plane rotation (around Z axis)
                 angle = float(shift_params)
                 # Rotate in XY plane (around Z axis)
-                result_gpu = cle.rotate(gpu_img, angle_around_z_in_degrees=angle, rotate_around_center=True)
+                result_gpu = cle.rigid_transform(gpu_img, angle_z=angle, centered=True)
 
             elif ttype == 'beta':
                 # ZX plane rotation (around Y axis)
                 angle = float(shift_params)
-                result_gpu = cle.rotate(gpu_img, angle_around_y_in_degrees=angle, rotate_around_center=True)
+                result_gpu = cle.rigid_transform(gpu_img, angle_y=angle, centered=True)
 
             elif ttype == 'gamma':
                 # ZY plane rotation (around X axis)
                 angle = float(shift_params)
-                result_gpu = cle.rotate(gpu_img, angle_around_x_in_degrees=angle, rotate_around_center=True)
+                result_gpu = cle.rigid_transform(gpu_img, angle_x=angle, centered=True)
 
             else:
                 raise ValueError(f"Unknown transform_type: {ttype}")
