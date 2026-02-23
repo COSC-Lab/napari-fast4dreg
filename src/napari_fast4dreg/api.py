@@ -49,7 +49,7 @@ from ._fast4Dreg_functions import (
     get_z_drift,
     write_tmp_data_to_disk,
 )
-from ._widget import convert_to_ctzyx, revert_to_original_axis_order
+from ._axis_utils import convert_to_ctzyx, revert_to_original_axis_order
 
 
 def register_image(
