@@ -30,6 +30,7 @@ from ._fast4Dreg_functions import (
     get_xy_drift,
     get_z_drift,
     read_tmp_data,
+    set_gpu_acceleration,
     write_tmp_data_to_disk,
 )
 
@@ -159,6 +160,15 @@ class Fast4DRegWidget(Container):
             value=True
         )
 
+        # GPU acceleration toggle
+        self.gpu_enabled = create_widget(
+            annotation=bool,
+            label="Enable GPU Acceleration",
+            name="gpu_enabled",
+            value=False
+        )
+        self.gpu_enabled.changed.connect(self._on_gpu_toggle)
+
         # GPU info display
         self.gpu_info_label = create_widget(
             annotation=str,
@@ -201,11 +211,24 @@ class Fast4DRegWidget(Container):
             self.correct_rotation,
             self.crop_output,
             self.export_data,
+            self.gpu_enabled,
             self.gpu_info_label,
             self.status_label,
             self.progress_bar,
             self.run_btn,
         ])
+
+    def _on_gpu_toggle(self):
+        """Handle GPU acceleration toggle."""
+        enabled = self.gpu_enabled.value
+        success = set_gpu_acceleration(enabled)
+        # Update GPU info label with current backend
+        self.gpu_info_label.value = get_gpu_info()
+        if enabled and not success:
+            self.status_label.value = "Warning: GPU not available, using CPU"
+        else:
+            backend = "GPU" if enabled else "CPU"
+            self.status_label.value = f"Backend switched to {self.gpu_info_label.value}"
 
     def _on_run_clicked(self):
         """Handle run button click."""
