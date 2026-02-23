@@ -21,9 +21,18 @@ viewer = napari.Viewer()
 ```python
 from napari_fast4dreg import register_image
 
-# With numpy/dask array
+# With numpy/dask array - CTZYX format
 result = register_image(
-    image,  # CTZYX format
+    image,  
+    axis_order="CTZYX",
+    ref_channel=0,
+    output_dir="./results"
+)
+
+# Or TZYX format (4D, single channel)
+result = register_image(
+    image,  
+    axis_order="TZYX",
     ref_channel=0,
     output_dir="./results"
 )
@@ -49,8 +58,9 @@ result = register_image_from_file(
 
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
-| `image` | ndarray/dask | required | Image in CTZYX format |
-| `ref_channel` | int/str | 0 | Reference channel(s): int (e.g., `0`), comma-separated (e.g., `"0,1"`), or space-separated (e.g., `"0 1"`) |
+| `image` | ndarray/dask | required | Image in specified axis order |
+| `axis_order` | str | "CTZYX" | Axis order: CTZYX, TZYX, ZYX, ZCYX, etc. Missing axes auto-added |
+| `ref_channel` | int/str | 0 | Reference channel(s): int (e.g., `0`), comma-separated (e.g., `"0,1"`) |
 | `output_dir` | str/Path | "./fast4dreg_output" | Output directory |
 | `correct_xy` | bool | True | Apply XY drift correction |
 | `correct_z` | bool | True | Apply Z drift correction |
@@ -68,7 +78,7 @@ result = register_image_from_file(
 Dictionary containing:
 ```python
 {
-    'registered_image': np.ndarray,  # Registered image (CTZYX)
+    'registered_image': np.ndarray,  # Registered image (same axis order as input)
     'xy_drift': np.ndarray,          # XY drift values
     'z_drift': np.ndarray,           # Z drift values
     'rotation_xy': np.ndarray,       # XY rotation angles
@@ -78,6 +88,23 @@ Dictionary containing:
 }
 ```
 
+## Supported Axis Orders
+
+The `axis_order` parameter accepts flexible axis specifications:
+
+| Order | Shape | Description |
+|-------|-------|-------------|
+| `CTZYX` | (C, T, Z, Y, X) | Standard 5D format |
+| `TZYX` | (T, Z, Y, X) | 4D, single channel |
+| `ZCYX` | (Z, C, Y, X) | 4D, single timepoint |
+| `CZYX` | (C, Z, Y, X) | 4D, single timepoint |
+| `ZYX` | (Z, Y, X) | 3D single timepoint + channel |
+| `TYX` | (T, Y, X) | Time series 2D |
+| `CYX` | (C, Y, X) | Multi-channel 2D image |
+| `YX` | (Y, X) | Single 2D image |
+
+Missing dimensions are automatically inserted as singletons during processing and removed in the output.
+
 ## Examples
 
 ### Basic Usage
@@ -86,9 +113,38 @@ Dictionary containing:
 from napari_fast4dreg import register_image
 import numpy as np
 
-image = np.load("my_image.npy")  # CTZYX format
-result = register_image(image, ref_channel=0)
+image = np.load("my_image.npy")  # TZYX format (4D)
+result = register_image(
+    image, 
+    axis_order="TZYX",
+    ref_channel=0
+)
 registered = result['registered_image']
+```
+
+### With Different Axis Orders
+
+```python
+# ImageJ format (TZCYX)
+result = register_image(
+    image, 
+    axis_order="TZCYX",
+    ref_channel=0
+)
+
+# Simple 3D volume (ZYX)
+result = register_image(
+    image,
+    axis_order="ZYX",
+    ref_channel=0
+)
+
+# 2D time series (TYX)
+result = register_image(
+    image,
+    axis_order="TYX",
+    ref_channel=0
+)
 ```
 
 ### With Progress Tracking

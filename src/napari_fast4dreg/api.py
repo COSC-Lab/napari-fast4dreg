@@ -49,10 +49,12 @@ from ._fast4Dreg_functions import (
     get_z_drift,
     write_tmp_data_to_disk,
 )
+from ._widget import convert_to_ctzyx, revert_to_original_axis_order
 
 
 def register_image(
     image: Union[np.ndarray, da.Array],
+    axis_order: str = "CTZYX",
     ref_channel: Union[int, str] = 0,
     output_dir: Union[str, Path] = "./fast4dreg_output",
     correct_xy: bool = True,
@@ -75,8 +77,15 @@ def register_image(
     Parameters
     ----------
     image : np.ndarray or dask.array.Array
-        Input image in CTZYX format (Channels, Time, Z, Y, X).
+        Input image in specified axis order (default: CTZYX).
         Can be numpy array or dask array for out-of-memory processing.
+    axis_order : str, default="CTZYX"
+        Axis order specification as a string. Examples:
+        - "CTZYX": Channels, Time, Z, Y, X (standard 5D)
+        - "TZYX": Time, Z, Y, X (4D, single channel)
+        - "ZYX": Z, Y, X (3D, single timepoint single channel)
+        - "CYX": Channels, Y, X (2D)
+        Supports any combination of C, T, Z, Y, X where Y and X are required.
     ref_channel : int or str, default=0
         Reference channel for drift detection. Can be:
         - Single channel: 0, 1, 2, etc.
@@ -122,14 +131,32 @@ def register_image(
     
     Examples
     --------
-    Basic registration with all corrections:
+    Basic registration with CTZYX format:
     
     >>> result = register_image(
-    ...     image,
+    ...     image,  # shape: (2, 10, 50, 512, 512) - CTZYX
+    ...     axis_order="CTZYX",
     ...     ref_channel=0,
     ...     output_dir="./results"
     ... )
     >>> registered = result['registered_image']
+    
+    TZYX format (4D, single channel):
+    
+    >>> result = register_image(
+    ...     image,  # shape: (10, 50, 512, 512) - TZYX
+    ...     axis_order="TZYX",
+    ...     ref_channel=0,
+    ...     output_dir="./results"
+    ... )
+    
+    ZYX format (3D, single timepoint):
+    
+    >>> result = register_image(
+    ...     image,  # shape: (50, 512, 512) - ZYX
+    ...     axis_order="ZYX",
+    ...     output_dir="./results"
+    ... )
     
     Only XY correction with progress tracking:
     
@@ -138,6 +165,7 @@ def register_image(
     >>> 
     >>> result = register_image(
     ...     image,
+    ...     axis_order="TZYX",
     ...     ref_channel=1,
     ...     correct_xy=True,
     ...     correct_z=False,
@@ -149,6 +177,7 @@ def register_image(
     
     >>> result = register_image(
     ...     image,
+    ...     axis_order="CTZYX",
     ...     ref_channel="0,3,5",
     ...     normalize_channels=True,
     ...     projection_type='max'
@@ -156,10 +185,12 @@ def register_image(
     
     Notes
     -----
-    - Input should be in CTZYX format (Channels, Time, Z, Y, X)
+    - Input axis order is automatically converted to CTZYX internally for processing
+    - Output is returned in the same axis order as the input
     - Temporary Zarr stores are created in output_dir for out-of-memory processing
     - For large datasets, consider using dask arrays to avoid loading into RAM
     - The output is automatically saved to output_dir/registered.zarr
+    - Missing dimensions (C, T, Z) are added automatically as singletons
     
     See Also
     --------
@@ -175,27 +206,17 @@ def register_image(
     output_dir = Path(output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
 
-    # Validate shape early (before dask conversion)
-    if isinstance(image, np.ndarray):
-        if image.ndim != 5:
-            raise ValueError(
-                f"Image must be 5D (CTZYX format), got shape {image.shape}. "
-                f"If your data has different dimensions, reshape it first."
-            )
-        _progress("Converting to dask array...")
-        # Chunk to keep full channels and time together, chunk spatially
-        chunks = (1, 1, 'auto', 'auto', 'auto')
-        data = da.from_array(image, chunks=chunks)
-    else:
-        data = image
-        # Validate dask array shape
-        if data.ndim != 5:
-            raise ValueError(
-                f"Image must be 5D (CTZYX format), got shape {data.shape}. "
-                f"If your data has different dimensions, reshape it first."
-            )
-
-    _progress(f"Input shape (CTZYX): {data.shape}")
+    # Convert to dask array early
+    _progress(f"Converting image to dask array (axis order: {axis_order})...")
+    img = da.asarray(image)
+    original_shape = img.shape
+    
+    # Validate and convert to CTZYX format
+    _progress(f"Converting from {axis_order} to CTZYX format...")
+    data, single_channel_mode, original_ndim = convert_to_ctzyx(img, axis_order)
+    
+    _progress(f"Input shape ({axis_order}): {original_shape}")
+    _progress(f"Working shape (CTZYX): {data.shape}")
 
     # Setup temporary storage
     tmp_path_1 = output_dir / "tmp_data_1.zarr"
@@ -317,11 +338,20 @@ def register_image(
     # Save to Zarr
     _progress("Saving to Zarr...")
     zarr_path = output_dir / "registered.zarr"
+    
+    # Revert to original axis order
+    _progress(f"Reverting to original axis order ({axis_order})...")
+    registered_image = revert_to_original_axis_order(registered_image, axis_order)
+    
     shape = registered_image.shape
     if len(shape) == 5:  # CTZYX
         chunks = (1, 1, shape[2], shape[3], shape[4])
+    elif len(shape) == 4:
+        chunks = (1, shape[1], shape[2], shape[3])
+    elif len(shape) == 3:
+        chunks = shape  # Use full shape for 3D arrays
     else:
-        chunks = None
+        chunks = shape  # Use full shape for 2D or other cases
     da.from_array(registered_image, chunks=chunks).to_zarr(str(zarr_path), overwrite=True)
 
     # Clean up temp files

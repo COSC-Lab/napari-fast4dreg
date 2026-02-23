@@ -45,6 +45,7 @@ def test_register_image_basic(test_image_5d, temp_output_dir):
     """Test basic registration with minimal corrections."""
     result = register_image(
         test_image_5d,
+        axis_order="CTZYX",
         ref_channel=0,
         output_dir=temp_output_dir,
         correct_xy=True,
@@ -215,16 +216,79 @@ def test_register_image_reference_modes(test_image_5d, temp_output_dir):
 
 
 def test_register_image_invalid_shape():
-    """Test that invalid image shape raises error."""
-    # 4D image (not 5D)
+    """Test that invalid axis order raises error."""
+    # Valid 4D image but with invalid axis order
     invalid_image = np.random.randint(0, 255, (3, 4, 32, 32), dtype=np.uint8)
 
-    with pytest.raises(ValueError, match="Image must be 5D"):
+    # Should raise error for invalid axis order (missing Y or X)
+    with pytest.raises(ValueError, match="Invalid axis order"):
         register_image(
             invalid_image,
+            axis_order="TZDC",  # Invalid: no Y or X
             ref_channel=0,
             output_dir="./test_output"
         )
+
+
+def test_register_image_tzyx_format(temp_output_dir):
+    """Test registration with TZYX format (4D, single channel)."""
+    # TZYX format: 3 timepoints, 4 Z-slices, 32x32
+    image_tzyx = np.random.randint(0, 255, (3, 4, 32, 32), dtype=np.uint8)
+    
+    result = register_image(
+        image_tzyx,
+        axis_order="TZYX",
+        ref_channel=0,
+        output_dir=temp_output_dir,
+        correct_xy=True,
+        correct_z=False,
+        correct_rotation=False,
+        return_drifts=True,
+    )
+    
+    # Output shape should match input
+    assert result['registered_image'].shape == image_tzyx.shape
+    assert "xy_drift" in result
+
+
+def test_register_image_zyx_format(temp_output_dir):
+    """Test registration with ZYX format (3D, single timepoint + channel)."""
+    # ZYX format: 4 Z-slices, 32x32
+    image_zyx = np.random.randint(0, 255, (4, 32, 32), dtype=np.uint8)
+    
+    result = register_image(
+        image_zyx,
+        axis_order="ZYX",
+        ref_channel=0,
+        output_dir=temp_output_dir,
+        correct_xy=True,
+        correct_z=False,
+        correct_rotation=False,
+        return_drifts=True,
+    )
+    
+    # Output shape should match input
+    assert result['registered_image'].shape == image_zyx.shape
+
+
+def test_register_image_zcyx_format(temp_output_dir):
+    """Test registration with ZCYX format (4D, single timepoint)."""
+    # ZCYX format: 2 Z-slices, 2 channels, 32x32
+    image_zcyx = np.random.randint(0, 255, (2, 2, 32, 32), dtype=np.uint8)
+    
+    result = register_image(
+        image_zcyx,
+        axis_order="ZCYX",
+        ref_channel=0,
+        output_dir=temp_output_dir,
+        correct_xy=True,
+        correct_z=False,
+        correct_rotation=False,
+        return_drifts=True,
+    )
+    
+    # Output shape should match input
+    assert result['registered_image'].shape == image_zcyx.shape
 
 
 def test_register_image_from_file_tiff(temp_output_dir):
