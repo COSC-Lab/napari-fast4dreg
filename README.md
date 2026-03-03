@@ -15,6 +15,12 @@ This is a Python port of the original Fast4DReg Fiji Plugin, with added rotation
 
 ----------------------------------
 
+## ⚠️ Disclaimer
+
+**For versions > 0.1.0:** AI was used to implement features and improvements in this package. While all changes have been tested, not all features may perform exactly as expected. If you encounter any issues or unexpected behavior, please **immediately raise a GitHub PR** so problems can be fixed as soon as possible. Your feedback helps improve the reliability and quality of this package.
+
+----------------------------------
+
 ## ✨ Features
 
 - **Multi-dimensional registration**: XY, Z, and 3D rotation correction
@@ -27,15 +33,16 @@ This is a Python port of the original Fast4DReg Fiji Plugin, with added rotation
 - **Thread-based execution**: Non-blocking UI during processing
 - **Flexible axis ordering**: Support for ImageJ and Python axis conventions
 - **Auto-detection**: Automatic single-channel mode detection
+- **GPU acceleration (optional)**: Automatic OpenCL GPU detection with NVIDIA preference and CPU fallback
 - **2D+t support**: Process time-lapse images with various dimensionalities
 - **Compressed storage**: Built-in Blosc compression reduces temporary storage by 2-3×
 
 ## Example Results
-  
 
 ![3D_plane_registration](./media/3D_plane_registration_scalebar_time_stamped.gif)
 ![3D_MIP_registration](./media/3D_mip_registration_scalebar_time_stamped.gif)
-![Output Overview](./media/drift_analysis.png)
+![drift_results](./media/drift_analysis.png)
+
 
 ## Installation
 
@@ -85,6 +92,26 @@ cd napari-fast4dreg
 pip install -e .
 ```
 
+### Optional GPU Acceleration (pyclesperanto)
+
+Fast4DReg can use [pyclesperanto](https://github.com/clEsperanto/pyclesperanto_prototype) to accelerate all transformations (translations and rotations) on OpenCL GPUs. This is **automatic** when available.
+
+```bash
+pip install pyclesperanto-prototype
+```
+
+Behavior summary:
+- **Auto-detects** OpenCL devices on import
+- **Prefers NVIDIA** GPUs over Intel GPUs when multiple are available
+- **Gracefully falls back to CPU** if GPU is not available or runs out of VRAM
+
+Check the current backend in Python:
+
+```python
+from napari_fast4dreg import get_gpu_info
+print(get_gpu_info())  # e.g., "GPU (NVIDIA RTX 1000)" or "CPU (scipy)"
+```
+
 ## Usage 
 
 ### Quick Start
@@ -114,6 +141,14 @@ pip install -e .
      - `Max` - Maximum intensity projection
      - `Median` - Median intensity projection
      - `Min` - Minimum intensity projection
+   
+   - **Axis Order**: Specify your image's axis order as a string:
+     - `CTZYX` - Channels, Time, Z, Y, X (default, 5D)
+     - `TZYX` - Time, Z, Y, X (4D, single channel)
+     - `ZYX` - Z, Y, X (3D, single timepoint + channel)
+     - `ZCYX` - Z, Channels, Y, X
+     - `CYX` - Channels, Y, X (2D, single timepoint)
+     - Any other combination works! Missing dimensions (C, T, Z) are automatically added as singletons
    
    - **Reference Mode**: Choose drift correction strategy:
      - `Relative` - Frame-to-frame comparison (cumulative drift, default)
