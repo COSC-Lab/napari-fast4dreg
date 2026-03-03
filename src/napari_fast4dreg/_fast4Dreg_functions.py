@@ -458,6 +458,7 @@ def _translate_z_stack_cpu(_image, _shift, transform_type):
 def _translate_z_stack_gpu(_image, _shift, transform_type):
     """GPU implementation using pyclesperanto."""
     _image_out = []
+    _shift = - _shift  # Negate shift for correct direction
     
     def _apply_gpu_transform(img_data, shift_params, ttype):
         """Helper to apply GPU transformation to numpy array."""

@@ -53,6 +53,8 @@ class Axes(Enum):
     ZYX = 5
 
 
+# Set default output path to example_files folder
+_DEFAULT_OUTPUT_PATH = str(Path(__file__).parent.parent.parent / "example_files")
 
 
 
