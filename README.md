@@ -51,7 +51,11 @@ This is a Python port of the original Fast4DReg Fiji Plugin, with added rotation
 You can install `napari-fast4dreg` via [pip]:
 
 ```bash
+# full install
 pip install napari-fast4dreg
+
+# api-only access (i.e. HPC) 
+pip install napari-fast4dreg[api-only]
 ```
 
 ### Recommended: Using Conda/Mamba
