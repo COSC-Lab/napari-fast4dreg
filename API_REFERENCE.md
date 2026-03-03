@@ -359,7 +359,7 @@ When multiple GPUs are available, Fast4DReg selects in this order:
 
 **Requirements**: 
 - OpenCL-compatible GPU (NVIDIA, AMD, or Intel)
-- pyclesperanto-prototype installed
+- pyclesperanto installed
 - Sufficient GPU memory for image data
 
 **Notes**:
