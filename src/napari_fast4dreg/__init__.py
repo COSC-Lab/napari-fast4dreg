@@ -1,4 +1,4 @@
-__version__ = "0.2.1"
+__version__ = "0.2.3"
 
 from ._fast4Dreg_functions import get_gpu_info, set_gpu_acceleration
 from .api import fast4dreg, register, register_image, register_image_from_file
