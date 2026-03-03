@@ -392,7 +392,6 @@ def translate_z_stack(_image, _shift, transform_type='z'):
 def _translate_z_stack_cpu(_image, _shift, transform_type):
     """CPU implementation using scipy.ndimage."""
     _image_out = []
-    _shift = - _shift  # Negate shift for correct direction
     return_numpy = isinstance(_image, np.ndarray) and _image.ndim == 3
     image_iter = [_image] if return_numpy else _image
 
@@ -458,7 +457,6 @@ def _translate_z_stack_cpu(_image, _shift, transform_type):
 def _translate_z_stack_gpu(_image, _shift, transform_type):
     """GPU implementation using pyclesperanto."""
     _image_out = []
-    _shift = - _shift  # Negate shift for correct direction
     
     def _apply_gpu_transform(img_data, shift_params, ttype):
         """Helper to apply GPU transformation to numpy array."""
