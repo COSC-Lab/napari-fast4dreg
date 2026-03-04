@@ -64,6 +64,9 @@ def test_register_image_basic(test_image_5d, temp_output_dir):
     # Check registered image shape matches input
     assert result['registered_image'].shape == test_image_5d.shape
 
+    # Check if registered image is a dask array 
+    assert hasattr(result['registered_image'], "chunks")  # Dask array has 'chunks
+
     # Check XY drift shape (should be Tx2)
     assert result['xy_drift'].shape == (3, 2)
 
@@ -313,7 +316,7 @@ def test_register_image_from_file_tiff(temp_output_dir):
     )
 
     assert 'registered_image' in result
-    assert result['registered_image'].shape[0] == 2  # Channels after reordering
+    assert result['registered_image'].shape == test_image.shape
 
 
 def test_register_image_from_file_npy(temp_output_dir):
@@ -407,12 +410,11 @@ def test_real_data_single_channel_basic(single_channel_file, temp_output_dir):
     assert 'xy_drift' in result
     assert 'output_path' in result
 
-    # Check output shape - should be CTZYX (1, 21, 64, 128, 128)
+    # Check output shape - should preserve TZYX input order
     registered = result['registered_image']
-    assert registered.ndim == 5
-    assert registered.shape[0] == 1  # Single channel
-    assert registered.shape[1] == 21  # 21 timepoints
-    assert registered.shape[2] == 64  # 64 z-slices
+    assert registered.ndim == 4
+    assert registered.shape[0] == 21  # 21 timepoints
+    assert registered.shape[1] == 64  # 64 z-slices
 
     # Check XY drift shape
     assert result['xy_drift'].shape == (21, 2)
@@ -455,10 +457,11 @@ def test_real_data_single_channel_full(single_channel_file, temp_output_dir):
     assert result['rotation_zx'].shape == (21,)
     assert result['rotation_zy'].shape == (21,)
 
-    # Check output shape maintained
+    # Check output shape maintained (TZYX)
     registered = result['registered_image']
-    assert registered.shape[0] == 1  # Single channel
-    assert registered.shape[1] == 21  # 21 timepoints
+    assert registered.ndim == 4
+    assert registered.shape[0] == 21  # 21 timepoints
+    assert registered.shape[1] == 64  # 64 z-slices
 
 
 @pytest.mark.slow
@@ -481,12 +484,12 @@ def test_real_data_multi_channel_ch0(multi_channel_file, temp_output_dir):
     assert 'xy_drift' in result
     assert 'z_drift' in result
 
-    # Check output shape - should be CTZYX (2, 21, 64, 128, 128)
+    # Check output shape - should preserve TZCYX input order
     registered = result['registered_image']
     assert registered.ndim == 5
-    assert registered.shape[0] == 2  # 2 channels
-    assert registered.shape[1] == 21  # 21 timepoints
-    assert registered.shape[2] == 64  # 64 z-slices
+    assert registered.shape[0] == 21  # 21 timepoints
+    assert registered.shape[1] == 64  # 64 z-slices
+    assert registered.shape[2] == 2  # 2 channels
 
     # Check drift shapes
     assert result['xy_drift'].shape == (21, 2)
@@ -510,7 +513,7 @@ def test_real_data_multi_channel_ch1(multi_channel_file, temp_output_dir):
 
     # Check results
     assert 'registered_image' in result
-    assert result['registered_image'].shape[0] == 2  # 2 channels preserved
+    assert result['registered_image'].shape[2] == 2  # 2 channels preserved in TZCYX
     assert result['xy_drift'].shape == (21, 2)
 
     # Verify drift was detected
@@ -534,7 +537,7 @@ def test_real_data_multi_channel_both_channels(multi_channel_file, temp_output_d
 
     # Check results
     assert 'registered_image' in result
-    assert result['registered_image'].shape[0] == 2  # Channels preserved
+    assert result['registered_image'].shape[2] == 2  # Channels preserved in TZCYX
     assert result['xy_drift'].shape == (21, 2)
 
 

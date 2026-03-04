@@ -2,9 +2,19 @@
 
 ## Installation
 
+### Full Installation (with napari GUI plugin)
+
 ```bash
 pip install napari-fast4dreg
 ```
+
+### API-Only Installation (lightweight, no GUI dependencies)
+
+```bash
+pip install napari-fast4dreg[api-only]
+```
+
+Use the API-only installation if you only need programmatic access and want to avoid installing napari and its dependencies.
 
 ## Three Ways to Use Fast4DReg
 
@@ -46,12 +56,33 @@ xy_drift = result['xy_drift']
 ```python
 from napari_fast4dreg import register_image_from_file
 
+# TIFF file (ImageJ format)
 result = register_image_from_file(
     "my_image.tif",
     axis_order="TZCYX",  # ImageJ format
     ref_channel=1,
     output_dir="./results"
 )
+
+# NumPy binary file
+result = register_image_from_file(
+    "my_image.npy",
+    axis_order="CZYX",
+    ref_channel=0,
+    output_dir="./results"
+)
+
+# Zarr file (chunked)
+result = register_image_from_file(
+    "my_image.zarr",
+    axis_order="CTZYX",
+    ref_channel=0,
+    output_dir="./results"
+)
+
+# Output is always same shape as input shape
+registered = result['registered_image']  
+xy_drift = result['xy_drift']
 ```
 
 ## Common Parameters
@@ -59,8 +90,8 @@ result = register_image_from_file(
 | Parameter | Type | Default | Description |
 |-----------|------|---------|-------------|
 | `image` | ndarray/dask | required | Image in specified axis order |
-| `axis_order` | str | "CTZYX" | Axis order: CTZYX, TZYX, ZYX, ZCYX, etc. Missing axes auto-added |
-| `ref_channel` | int/str | 0 | Reference channel(s): int (e.g., `0`), comma-separated (e.g., `"0,1"`) |
+| `axis_order` | str | "CTZYX" | Axis order: CTZYX, TZCYX, TZYX, ZYX, CZYX, CYX, TYX, or YX. Missing axes auto-added |
+| `ref_channel` | int/str/list/tuple | 0 | Reference channel(s): int (e.g., `0`), list (e.g., `[0,1,5]`), comma-separated string (e.g., `"0,1,5"`), space-separated (e.g., `"0 1 5"`) |
 | `output_dir` | str/Path | "./fast4dreg_output" | Output directory |
 | `correct_xy` | bool | True | Apply XY drift correction |
 | `correct_z` | bool | True | Apply Z drift correction |
@@ -78,14 +109,35 @@ result = register_image_from_file(
 Dictionary containing:
 ```python
 {
-    'registered_image': np.ndarray,  # Registered image (same axis order as input)
-    'xy_drift': np.ndarray,          # XY drift values
-    'z_drift': np.ndarray,           # Z drift values
+    'registered_image': dask.array.Array,  # Registered image (dask array, lazy-loaded)
+                                          # For register_image: same axis order as input
+                                          # For register_image_from_file: always CTZYX
+    'xy_drift': np.ndarray,          # XY drift values (T, 2)
+    'z_drift': np.ndarray,           # Z drift values (T, 2)
     'rotation_xy': np.ndarray,       # XY rotation angles
     'rotation_zx': np.ndarray,       # ZX rotation angles
     'rotation_zy': np.ndarray,       # ZY rotation angles
     'output_path': Path              # Path to saved Zarr
 }
+```
+
+### Working with the Registered Image
+
+The `registered_image` is a **dask array**, meaning it's lazy-loaded from Zarr storage:
+
+```python
+result = register_image(image, ...}
+registered = result['registered_image']  # dask.array, not in RAM
+
+# Convert to numpy if needed (loads into memory, make sure it fits)
+registered_np = registered.compute()
+
+# Or work with it directly for out-of-memory processing
+mip_projection = registered.max(axis = 2).compute()
+
+# Or save chunks back to disk
+import dask.array as da
+da.to_zarr(registered, "path/to/output.zarr")
 ```
 
 ## Supported Axis Orders
@@ -100,8 +152,8 @@ The `axis_order` parameter accepts flexible axis specifications:
 | `CZYX` | (C, Z, Y, X) | 4D, single timepoint |
 | `ZYX` | (Z, Y, X) | 3D single timepoint + channel |
 | `TYX` | (T, Y, X) | Time series 2D |
-| `CYX` | (C, Y, X) | Multi-channel 2D image |
-| `YX` | (Y, X) | Single 2D image |
+| `CYX` | (C, Y, X) | Multi-channel 2D image (included for pipeline savety) |
+| `YX` | (Y, X) | Single 2D image (included for pipeline savety) | 
 
 Missing dimensions are automatically inserted as singletons during processing and removed in the output.
 
@@ -175,15 +227,42 @@ result = register_image(
 ### Multi-Channel Reference
 
 ```python
-# Use multiple channels - comma or space-separated
+# Multiple ways to specify multiple reference channels:
+
+# Option 1: List of integers
 result = register_image(
     image,
-    ref_channel="0,3,5",  # Use channels 0, 3, and 5 (comma-separated)
-    # OR: ref_channel="0 3 5"  # Space-separated also works
+    ref_channel=[0, 3, 5],  # List of channel indices
+    normalize_channels=True,
+    projection_type='max'
+)
+
+# Option 2: Tuple of integers
+result = register_image(
+    image,
+    ref_channel=(0, 3, 5),  # Tuple - same as list
+    normalize_channels=True,
+    projection_type='max'
+)
+
+# Option 3: Comma-separated string
+result = register_image(
+    image,
+    ref_channel="0,3,5",  # Comma-separated string
+    normalize_channels=True,
+    projection_type='max'
+)
+
+# Option 4: Space-separated string
+result = register_image(
+    image,
+    ref_channel="0 3 5",  # Space-separated string
     normalize_channels=True,
     projection_type='max'
 )
 ```
+
+All formats above produce the same result: channels 0, 3, and 5 are summed together for drift detection.
 
 ### Integration into Workflow
 
@@ -216,12 +295,32 @@ print(f"Maximum drift: {max_drift:.2f} pixels")
 ```python
 from napari_fast4dreg import register_image_from_file
 
+# ImageJ format (TZCYX) - Output will be TZCYX
 result = register_image_from_file(
     "timelapse.tif",
-    axis_order="TZCYX",  # ImageJ: Time, Z, Channel, Y, X
+    axis_order="TZCYX",  # Time, Z, Channel, Y, X (default for TIFF)
     ref_channel=1,
     output_dir="./results"
 )
+registered = result['registered_image']  # Shape: (T, Z, C, Y, X)
+
+# Single channel TIFF (TZYX) - Output will be TZYX  
+result = register_image_from_file(
+    "timelapse.tif",
+    axis_order="TZYX",   # Time, Z, Y, X
+    ref_channel=0,
+    output_dir="./results"
+)
+registered = result['registered_image']  # Shape: (T, Z, Y, X)
+
+# NumPy array file (.npy)
+result = register_image_from_file(
+    "image_stack.npy",
+    axis_order="CZYX",   # Channels, Z, Y, X
+    ref_channel="0,1",
+    output_dir="./results"
+)
+registered = result['registered_image']  # Shape: (C, Z, Y, X)
 ```
 
 ### Batch Processing
@@ -249,39 +348,75 @@ for tif_file in input_dir.glob("*.tif"):
 
 ## Axis Order Formats
 
-Fast4DReg expects **CTZYX** format (Channels, Time, Z, Y, X).
+Fast4DReg processes images in **CTZYX** format internally, but input and output formats are flexible.
 
-Common conversions:
-- **ImageJ/Fiji** (`TZCYX`): Use `axis_order="TZCYX"` in `register_image_from_file()`
-- **Single channel** (`TZYX`): Use `axis_order="TZYX"` - channel dimension is added automatically
-- **Already CTZYX**: Use `axis_order="CTZYX"` or pass directly to `register_image()`
+### Input/Output Axis Orders
+- **register_image()**: Input in format X, output in format X (same as input)
+- **register_image_from_file()**: Input in format X, output in format X (same as input file)
 
-Manual conversion:
+### Supported Formats
+- `CTZYX` - Standard 5D (Channels, Time, Z, Y, X)
+- `TZCYX` - ImageJ/Fiji format (Time, Z, Channels, Y, X) [DEFAULT for register_image_from_file]
+- `TZYX` - Single channel time series (Time, Z, Y, X)
+- `CZYX` - Multi-channel single timepoint (Channels, Z, Y, X)
+- `ZYX` - Single timepoint single channel volume (Z, Y, X)
+- `CYX` - Multi-channel 2D image (Channels, Y, X)
+- `TYX` - 2D time series (Time, Y, X)
+- `YX` - Single 2D image
+
+Missing dimensions (C, T, Z) are automatically inserted as singletons during processing.
+
+### Example: Axis Order Preservation
+
 ```python
+from napari_fast4dreg import register_image, register_image_from_file
 import numpy as np
 
-# TZCYX → CTZYX
-image_ctzyx = np.moveaxis(image_tzcyx, [0, 1, 2], [1, 2, 0])
+# register_image preserves input format
+image_tzyx = np.load("data.npy")  # Shape: (T, Z, Y, X)
+result = register_image(image_tzyx, axis_order="TZYX")
+output = result['registered_image']  # Still TZYX: (T, Z, Y, X)
 
-# TZYX → CTZYX (add channel dim)
-image_ctzyx = image_tzyx[:, np.newaxis, ...]
+# register_image_from_file preserves file format
+# File is TZCYX, output is TZCYX
+result = register_image_from_file("data.tif", axis_order="TZCYX")
+output = result['registered_image']  # TZCYX: (T, Z, C, Y, X)
+
+# Custom format also preserved
+result = register_image_from_file("data.npy", axis_order="CZYX")
+output = result['registered_image']  # CZYX: (C, Z, Y, X)
 ```
 
 ## Output Files
 
 When registration completes, you'll find:
-- `registered.zarr/` - Final registered image (Zarr format)
+- `registered.zarr/` - Final registered image (Zarr format, dask-accessible)
+   - Format matches your input's axis_order
+   - For TZCYX input: output is TZCYX
+   - For CZYX input: output is CZYX
+   - etc.
 - `tmp_data_*.zarr/` - Temporary stores (deleted unless `keep_temp_files=True`)
 
-Load the output in napari or Python:
+Load and work with the output:
 ```python
-# In napari
-viewer.open("./results/registered.zarr")
+# From the result dictionary
+result = register_image_from_file("data.tif", axis_order="TZCYX")
+registered = result['registered_image']  # dask.array in TZCYX format
 
-# In Python
+# Or load manually from disk
 import dask.array as da
-import zarr
-registered = da.from_zarr("./results/registered.zarr")
+registered = da.from_zarr("./results/registered.zarr")  # Format matches input
+
+# Convert to numpy for analysis
+registered_np = registered.compute()
+
+# Or process chunks without loading all into RAM
+mean = registered.mean().compute()
+max_val = registered.max().compute()
+
+# View in napari (napari accepts dask arrays directly)
+import napari
+viewer = napari.view_image(registered)
 ```
 
 ## Tips
@@ -296,13 +431,13 @@ registered = da.from_zarr("./results/registered.zarr")
 
 ## GPU Acceleration (Optional)
 
-Fast4DReg **automatically detects and enables GPU acceleration** when available using [pyclesperanto](https://github.com/clEsperanto/pyclesperanto_prototype) for all transformation operations (translations and rotations).
+Fast4DReg **automatically detects and enables GPU acceleration** when available using [pyclesperanto](https://github.com/clEsperanto/pyclesperanto) for all transformation operations (translations and rotations).
 
 ### Installation
 
 ```bash
 # Install pyclesperanto for GPU support
-pip install pyclesperanto-prototype
+pip install pyclesperanto
 ```
 
 ### Automatic Detection

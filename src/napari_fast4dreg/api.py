@@ -55,7 +55,7 @@ from ._axis_utils import convert_to_ctzyx, revert_to_original_axis_order
 def register_image(
     image: Union[np.ndarray, da.Array],
     axis_order: str = "CTZYX",
-    ref_channel: Union[int, str] = 0,
+    ref_channel: Union[int, str, list, tuple] = 0,
     output_dir: Union[str, Path] = "./fast4dreg_output",
     correct_xy: bool = True,
     correct_z: bool = True,
@@ -86,10 +86,14 @@ def register_image(
         - "ZYX": Z, Y, X (3D, single timepoint single channel)
         - "CYX": Channels, Y, X (2D)
         Supports any combination of C, T, Z, Y, X where Y and X are required.
-    ref_channel : int or str, default=0
-        Reference channel for drift detection. Can be:
-        - Single channel: 0, 1, 2, etc.
-        - Multiple channels (comma-separated): "0,3,5"
+    ref_channel : int, str, list, or tuple, default=0
+        Reference channel(s) for drift detection. Can be:
+        - Single channel: 0, 1, 2 (int)
+        - List of channels: [0, 3, 5] or (0, 3, 5)
+        - Comma-separated string: "0,3,5"
+        - Space-separated string: "0 3 5"
+        When multiple channels are specified, they are summed together
+        (optionally normalized if normalize_channels=True)
     output_dir : str or Path, default="./fast4dreg_output"
         Directory for output files and temporary storage.
     correct_xy : bool, default=True
@@ -121,13 +125,14 @@ def register_image(
     -------
     dict
         Dictionary containing:
-        - 'registered_image': np.ndarray - The registered image (CTZYX)
+        - 'registered_image': dask.array.Array - The registered image in the same 
+          axis order as specified by the `axis_order` parameter. Lazy-loaded from Zarr.
         - 'xy_drift': np.ndarray - XY drift values (if return_drifts=True)
         - 'z_drift': np.ndarray - Z drift values (if return_drifts=True)
         - 'rotation_xy': np.ndarray - XY rotation angles (if return_drifts=True)
         - 'rotation_zx': np.ndarray - ZX rotation angles (if return_drifts=True)
         - 'rotation_zy': np.ndarray - ZY rotation angles (if return_drifts=True)
-        - 'output_path': Path - Path to saved output
+        - 'output_path': Path - Path to saved output (Zarr format)
     
     Examples
     --------
@@ -178,7 +183,7 @@ def register_image(
     >>> result = register_image(
     ...     image,
     ...     axis_order="CTZYX",
-    ...     ref_channel="0,3,5",
+    ...     ref_channel=[0, 3, 5],  # Can also use "0,3,5" or (0, 3, 5)
     ...     normalize_channels=True,
     ...     projection_type='max'
     ... )
@@ -331,10 +336,9 @@ def register_image(
         data = write_tmp_data_to_disk(str(tmp_path_write), data, new_shape)
         tmp_path_read, tmp_path_write = tmp_path_write, tmp_path_read
 
-
     # Revert to original axis order
     _progress(f"Reverting to original axis order ({axis_order})...")
-    registered_image = revert_to_original_axis_order(registered_image, axis_order)
+    registered_image = revert_to_original_axis_order(data, axis_order)
     
     shape = registered_image.shape
     if len(shape) == 5:  # CTZYX
@@ -349,7 +353,11 @@ def register_image(
     # Save to Zarr
     _progress("Saving to Zarr...")
     zarr_path = output_dir / "registered.zarr"
-    da.from_array(registered_image, chunks=chunks).to_zarr(str(zarr_path), overwrite=True)
+    # Use rechunk if already a dask array, otherwise from_array
+    if isinstance(registered_image, da.Array):
+        da.rechunk(registered_image, chunks=chunks).to_zarr(str(zarr_path), overwrite=True)
+    else:
+        da.from_array(registered_image, chunks=chunks).to_zarr(str(zarr_path), overwrite=True)
 
     # Clean up temp files
     if not keep_temp_files:
@@ -374,37 +382,97 @@ def register_image(
 
 def register_image_from_file(
     filepath: Union[str, Path],
-    axis_order: str = "CTZYX",
+    axis_order: str = "TZCYX",
     **kwargs
 ) -> Dict[str, Any]:
     """
     Load and register an image from a file.
     
+    This function loads an image file in any axis order and registers it.
+    The output is returned in the same axis order as specified.
+    
     Parameters
     ----------
     filepath : str or Path
-        Path to image file (supports TIFF, Zarr, NPY, etc.)
-    axis_order : str, default="CTZYX"
-        Axis order of the input file. Will be reordered to CTZYX.
-        Common formats:
-        - "CTZYX" - Already in correct format
-        - "TZCYX" - ImageJ/Fiji format (Time, Z, Channels, Y, X)
+        Path to image file. Supported formats:
+        - TIFF (.tif, .tiff) - Most common for microscopy data
+        - NumPy binary (.npy) - For numpy arrays
+        - Zarr (.zarr) - For chunked out-of-memory datasets
+    axis_order : str, default="TZCYX"
+        Axis order of the input file. Supports any combination of C, T, Z, Y, X
+        where Y and X are required. Examples:
+        - "TZCYX" - ImageJ/Fiji format (Time, Z, Channels, Y, X) [DEFAULT]
+        - "CTZYX" - Standard 5D format
         - "TZYX" - Single channel time series
+        - "ZYX" - Single timepoint, single channel volume
+        - "CZYX" - Multi-channel, single timepoint
+        - "YX" - 2D image
+        Missing dimensions (C, T, Z) are added as singletons automatically.
     **kwargs
-        Additional arguments passed to register_image()
+        Additional arguments passed to register_image() (ref_channel, output_dir, 
+        correct_xy, correct_z, correct_rotation, etc.)
     
     Returns
     -------
     dict
-        Same as register_image()
+        Dictionary with same structure as register_image(). The 'registered_image' 
+        is returned in the same axis order as the input:
+        - dask.array.Array - Lazy-loaded from Zarr
+        - Format matches the input axis_order parameter
+        
+        All other return values (drift data, output_path) are the same as register_image().
     
     Examples
     --------
+    ImageJ/Fiji TIFF format (input TZCYX → output TZCYX):
+    
     >>> result = register_image_from_file(
     ...     "my_image.tif",
     ...     axis_order="TZCYX",  # ImageJ format
-    ...     ref_channel=1
+    ...     ref_channel=1,
+    ...     output_dir="./results"
     ... )
+    >>> registered = result['registered_image']  # Shape: (T, Z, C, Y, X)
+    >>> xy_drift = result['xy_drift']  # Shape: (T, 2)
+    
+    Single channel time series (input TZYX → output TZYX):
+    
+    >>> result = register_image_from_file(
+    ...     "timelapse.tif",
+    ...     axis_order="TZYX",
+    ...     correct_xy=True,
+    ...     correct_z=True
+    ... )
+    >>> registered = result['registered_image']  # Shape: (T, Z, Y, X)
+    
+    3D volume, single timepoint (input ZYX → output ZYX):
+    
+    >>> result = register_image_from_file(
+    ...     "volume.zarr",
+    ...     axis_order="ZYX",
+    ...     correct_rotation=True
+    ... )
+    >>> registered = result['registered_image']  # Shape: (Z, Y, X)
+    
+    Multi-channel Z-stack (input CZYX → output CZYX):
+    
+    >>> result = register_image_from_file(
+    ...     "stack.npy",
+    ...     axis_order="CZYX",
+    ...     ref_channel="0,1"
+    ... )
+    >>> registered = result['registered_image']  # Shape: (C, Z, Y, X)
+    
+    Notes
+    -----
+    - This function loads an image and passes it to register_image() with the specified axis_order
+    - Output preserves the input axis order format
+    - Missing dimensions (C, T, Z) are added as singletons during processing
+    - The registered image is stored in Zarr format for out-of-memory access
+    
+    See Also
+    --------
+    register_image : For custom axis order in output, use this function directly
     """
     import tifffile
 
@@ -412,39 +480,19 @@ def register_image_from_file(
 
     # Load based on extension
     if filepath.suffix in ['.tif', '.tiff']:
-        image = tifffile.imread(str(filepath))
-    elif filepath.suffix == '.npy':
+        image = da.from_zarr(tifffile.imread(str(filepath), aszarr=True))
+    
+    # npy support for test files 
+    elif filepath.suffix == '.npy': 
         image = np.load(str(filepath))
+    
     elif filepath.suffix == '.zarr' or filepath.is_dir():
         image = da.from_zarr(str(filepath))
     else:
         raise ValueError(f"Unsupported file format: {filepath.suffix}")
-
-    # Reorder axes to CTZYX
-    if axis_order != "CTZYX":
-        # Simple reordering logic
-        if axis_order == "TZCYX":
-            # Swap T and C, then T and Z
-            # Use image-specific method (works for both numpy and dask)
-            if isinstance(image, da.Array):
-                image = da.swapaxes(image, 0, 2)  # CTZYX
-                image = da.swapaxes(image, 1, 2)  # CTZYX
-            else:
-                image = np.swapaxes(image, 0, 2)  # CTZYX
-                image = np.swapaxes(image, 1, 2)  # CTZYX
-        elif axis_order == "TZYX":
-            # Add channel dimension at position 0
-            if isinstance(image, da.Array):
-                image = image[da.newaxis, :, ...]  # CTZYX
-            else:
-                image = image[np.newaxis, :, ...]  # CTZYX
-        else:
-            warnings.warn(
-                f"Axis order '{axis_order}' not recognized. "
-                f"Please manually reorder to CTZYX format."
-            )
-
-    return register_image(image, **kwargs)
+    
+    # Call register_image with CTZYX format to ensure output is always CTZYX
+    return register_image(image, axis_order=axis_order, **kwargs)
 
 
 # Convenience aliases

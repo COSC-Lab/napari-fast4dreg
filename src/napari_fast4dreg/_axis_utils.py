@@ -167,9 +167,10 @@ def revert_to_original_axis_order(data, original_axis_string):
     remaining_axes = [ax for ax in ctzyx_order if ax in original_axis_string]
 
     if len(remaining_axes) > 1 and remaining_axes != list(original_axis_string):
-        # Create permutation from current order to desired order
-        src_pos = list(range(len(remaining_axes)))
-        dst_pos = [remaining_axes.index(ax) for ax in original_axis_string]
+        # Move each axis from its current position to the position required by
+        # original_axis_string so output order matches the user input.
+        src_pos = [remaining_axes.index(ax) for ax in original_axis_string]
+        dst_pos = list(range(len(original_axis_string)))
         result = da.moveaxis(result, src_pos, dst_pos)
 
     return result

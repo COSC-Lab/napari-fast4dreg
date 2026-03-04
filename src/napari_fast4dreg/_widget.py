@@ -94,6 +94,7 @@ class Fast4DRegWidget(Container):
             name="ref_channel",
             value="0"
         )
+        self.ref_channel.tooltip = "Single channel (0) or list of channels for drift detection. Formats: 0, [0,1,2], '0,1,2', or '0 1 2'"
 
         self.normalize_channels = create_widget(
             annotation=bool,
@@ -101,6 +102,7 @@ class Fast4DRegWidget(Container):
             name="normalize_channels",
             value=False
         )
+        self.normalize_channels.tooltip = "Normalize each reference channel to 0-1 range before summing (useful for channels with different intensities)"
 
         self.projection_type = create_widget(
             annotation=str,
@@ -110,6 +112,7 @@ class Fast4DRegWidget(Container):
             options={"choices": ["Average", "Max", "Median", "Min"]}
         )
         self.projection_type.value = "Average"
+        self.projection_type.tooltip = "Method for projecting Z-stacks: Average (mean), Max (maximum intensity), Median, or Min (minimum intensity)"
 
         self.reference_mode = create_widget(
             annotation=str,
@@ -119,6 +122,7 @@ class Fast4DRegWidget(Container):
             options={"choices": ["Relative", "First Frame"]}
         )
         self.reference_mode.value = "Relative"
+        self.reference_mode.tooltip = "Drift detection mode: Relative (frame-to-frame, cumulative) or First Frame (all frames compared to first frame)"
 
         self.output_path = create_widget(
             annotation=str,
@@ -126,6 +130,7 @@ class Fast4DRegWidget(Container):
             name="output_path",
             value=_DEFAULT_OUTPUT_PATH
         )
+        self.output_path.tooltip = "Directory where registered image, drift data (CSV), and plots (SVG) will be saved"
 
         self.multichannel_mode = create_widget(
             annotation=bool,
@@ -133,6 +138,7 @@ class Fast4DRegWidget(Container):
             name="multichannel_mode",
             value=False
         )
+        self.multichannel_mode.tooltip = "Register each channel separately (useful when channels move independently) instead of using all channels for drift detection"
 
         self.correct_xy = create_widget(
             annotation=bool,
@@ -140,6 +146,7 @@ class Fast4DRegWidget(Container):
             name="correct_xy",
             value=True
         )
+        self.correct_xy.tooltip = "Enable/disable correction for lateral (XY plane) drift"
 
         self.correct_z = create_widget(
             annotation=bool,
@@ -147,6 +154,7 @@ class Fast4DRegWidget(Container):
             name="correct_z",
             value=True
         )
+        self.correct_z.tooltip = "Enable/disable correction for axial (Z-axis) drift"
 
         self.correct_rotation = create_widget(
             annotation=bool,
@@ -154,6 +162,7 @@ class Fast4DRegWidget(Container):
             name="correct_rotation",
             value=True
         )
+        self.correct_rotation.tooltip = "Enable/disable 3D rotation correction (in XY, ZX, and ZY planes). Applied sequentially after drift corrections."
 
         self.crop_output = create_widget(
             annotation=bool,
@@ -161,6 +170,7 @@ class Fast4DRegWidget(Container):
             name="crop_output",
             value=False
         )
+        self.crop_output.tooltip = "Remove invalid border regions introduced by drift correction to maintain valid data area"
 
         self.export_data = create_widget(
             annotation=bool,
@@ -168,6 +178,7 @@ class Fast4DRegWidget(Container):
             name="export_data",
             value=True
         )
+        self.export_data.tooltip = "Save drift measurements to CSV files and generate visualization plots (SVG) of XY, Z, and rotation drift"
 
         # GPU acceleration toggle
         self.gpu_enabled = create_widget(
@@ -176,6 +187,7 @@ class Fast4DRegWidget(Container):
             name="gpu_enabled",
             value=True
         )
+        self.gpu_enabled.tooltip = "Use GPU (if available) for faster processing. Falls back to CPU if no GPU detected."
         self.gpu_enabled.changed.connect(self._on_gpu_toggle)
 
         # GPU info display
@@ -203,6 +215,7 @@ class Fast4DRegWidget(Container):
 
         # Run button
         self.run_btn = PushButton(text="Run Registration")
+        self.run_btn.tooltip = "Start the image registration process with current settings. Detects and corrects drift in the selected image layer."
         self.run_btn.changed.connect(self._on_run_clicked)
 
         # Add all widgets to container
