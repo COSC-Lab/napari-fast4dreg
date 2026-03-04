@@ -331,14 +331,7 @@ def register_image(
         data = write_tmp_data_to_disk(str(tmp_path_write), data, new_shape)
         tmp_path_read, tmp_path_write = tmp_path_write, tmp_path_read
 
-    # Compute final result
-    _progress("Computing registered image...")
-    registered_image = data.compute()
 
-    # Save to Zarr
-    _progress("Saving to Zarr...")
-    zarr_path = output_dir / "registered.zarr"
-    
     # Revert to original axis order
     _progress(f"Reverting to original axis order ({axis_order})...")
     registered_image = revert_to_original_axis_order(registered_image, axis_order)
@@ -352,6 +345,10 @@ def register_image(
         chunks = shape  # Use full shape for 3D arrays
     else:
         chunks = shape  # Use full shape for 2D or other cases
+    
+    # Save to Zarr
+    _progress("Saving to Zarr...")
+    zarr_path = output_dir / "registered.zarr"
     da.from_array(registered_image, chunks=chunks).to_zarr(str(zarr_path), overwrite=True)
 
     # Clean up temp files
